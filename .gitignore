@@ -1,0 +1,10 @@
+*.gem
+.bundle
+Gemfile.lock
+README.html
+coverage/
+examples/
+pkg/*
+
+# MAC OS
+.DS_Store
