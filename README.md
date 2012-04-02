@@ -1,4 +1,4 @@
-Drudgery
+Drudgery [![Build Status](https://secure.travis-ci.org/jisraelsen/drudgery.png?branch=master)](http://travis-ci.org/jisraelsen/drudgery)
 ========
 
 A simple ETL library that supports the following sources/destinations:
