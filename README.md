@@ -65,7 +65,7 @@ m.prepare do |job|
     data
   end
 
-  job.load :active_record, ActiveRecord
+  job.load :active_record, Address
 end
 
 m.run
@@ -111,11 +111,7 @@ m.run
 Extractors
 ----------
 
-The following extractors are provided:
- 
- * `:csv`
- * `:sqlite3`
- * `:active_record`
+The following extractors are provided: `:csv`, `:sqlite3`, `:active_record`
 
 You can use your own extractors if you would like.  They need only
 implement an `#extract` method that yields each record:
@@ -181,13 +177,13 @@ each record and allows you to register processors to process data.  Registered
 processors should implement a `#call` method and return a `Hash` or `nil`.
 
 ```ruby
-custom_processor = lambda do |data, cache|
+custom_processor = Proc.new do |data, cache|
   data[:initials] = data[:name].split(' ').map(&:capitalize)
   data
 end
 
 transformer = Drudgery::Transformer.new
-transformer.register(&custom_processor)
+transformer.register(custom_processor)
 
 transformer.transform({ :name => 'John Doe' }) # == { :name => 'John Doe', :initials => 'JD' }
 ```
@@ -195,7 +191,7 @@ transformer.transform({ :name => 'John Doe' }) # == { :name => 'John Doe', :init
 You could also implement your own transformer if you need more custom
 processing power.  If you inherit from `Drudgery::Transfomer`, you need
 only implement the `#transform` method that accepts a hash as an
-argument.
+argument and returns a `Hash` or `nil`.
 
 ```ruby
 class CustomTransformer < Drudgery::Transformer
@@ -281,7 +277,7 @@ Contributing
 
 Pull requests are welcome.  Just make sure to include tests!
 
-To run tests, first install dependencies:
+To run tests, install some dependencies:
 
 ```bash
 bundle install
