@@ -55,7 +55,7 @@ m = Drudgery::Manager.new
 m.prepare do |job|
   job.extract :csv, 'src/addresses.csv'
 
-  job.transform do |data|
+  job.transform do |data, cache|
     first_name, last_name = data.delete(:name).split(' ')
 
     data[:first_name] = first_name
@@ -93,7 +93,7 @@ m.prepare do |job|
     extractor.order('name')
   end
 
-  job.transform do |data|
+  job.transform do |data, cache|
     first_name, last_name = data.delete(:name).split(' ')
 
     data[:first_name] = first_name
@@ -190,7 +190,7 @@ transformer.transform({ :name => 'John Doe' }) # == { :name => 'John Doe', :init
 
 You could also implement your own transformer if you need more custom
 processing power.  If you inherit from `Drudgery::Transfomer`, you need
-only implement the `#transform` method that accepts a hash as an
+only implement the `#transform` method that accepts a hash argument as an
 argument and returns a `Hash` or `nil`.
 
 ```ruby
