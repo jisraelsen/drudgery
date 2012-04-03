@@ -48,6 +48,18 @@ describe Drudgery::Job do
       job.extract(:csv, 'filename.csv', :col_sep => '|')
     end
 
+    it 'yields extractor if block_given' do
+      extractor = mock
+      extractor.expects(:col_sep).with('|')
+
+      Drudgery::Extractors.stubs(:instantiate).returns(extractor)
+
+      job = Drudgery::Job.new
+      job.extract(:csv, 'filename.csv') do |extractor|
+        extractor.col_sep '|'
+      end
+    end
+
     it 'sets extractor' do
       extractor = mock
 
@@ -86,6 +98,18 @@ describe Drudgery::Job do
 
       job = Drudgery::Job.new
       job.load(:sqlite3, 'db.sqlite3', 'tablename')
+    end
+
+    it 'yields loader if block_given' do
+      loader = mock
+      loader.expects(:select).with('a', 'b', 'c')
+
+      Drudgery::Loaders.stubs(:instantiate).with(:sqlite3, 'db.sqlite3', 'tablename').returns(loader)
+
+      job = Drudgery::Job.new
+      job.load(:sqlite3, 'db.sqlite3', 'tablename') do |loader|
+        loader.select('a', 'b', 'c')
+      end
     end
 
     it 'sets extractor' do

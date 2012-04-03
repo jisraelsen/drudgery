@@ -13,7 +13,11 @@ module Drudgery
     end
 
     def extract(type, *args)
-      @extractor = Drudgery::Extractors.instantiate(type, *args)
+      extractor = Drudgery::Extractors.instantiate(type, *args)
+
+      yield extractor if block_given?
+
+      @extractor = extractor
     end
 
     def transform(&processor)
@@ -21,7 +25,11 @@ module Drudgery
     end
 
     def load(type, *args)
-      @loader = Drudgery::Loaders.instantiate(type, *args)
+      loader = Drudgery::Loaders.instantiate(type, *args)
+
+      yield loader if block_given?
+
+      @loader = loader
     end
 
     def perform
