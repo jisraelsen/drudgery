@@ -9,7 +9,7 @@ Gem::Specification.new do |s|
   s.email       = ['jisraelsen@gmail.com']
   s.homepage    = 'http://github.com/jisraelsen/drudgery'
   s.summary     = 'Simple ETL Library'
-  s.description = 'Currently supports CSV, SQLite3, and ActiveRecord sources and destinations.'
+  s.description = 'A simple ETL library that supports CSV, SQLite3, and ActiveRecord sources and destinations.'
 
   s.required_ruby_version = '>= 1.9.2'
 
