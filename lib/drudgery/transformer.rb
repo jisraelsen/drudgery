@@ -1,23 +1,17 @@
 module Drudgery
   class Transformer
     def initialize
-      @processors = []
       @cache = {}
     end
 
     def register(processor)
-      @processors << processor
+      @processor = processor
     end
 
     def transform(data)
       symbolize_keys!(data)
 
-      @processors.each do |processor|
-        data = processor.call(data, @cache)
-        break if data.nil?
-      end
-
-      data
+      @processor ? @processor.call(data, @cache) : data
     end
 
     private
