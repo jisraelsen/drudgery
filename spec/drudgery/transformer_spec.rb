@@ -6,21 +6,19 @@ describe Drudgery::Transformer do
   end
 
   describe '#initialize' do
-    it 'initializes processors array' do
-      @transformer.instance_variable_get('@processors').must_equal []
-    end
-
     it 'initializes cache hash' do
       @transformer.instance_variable_get('@cache').must_equal({})
     end
   end
 
   describe '#register' do
-    it 'adds processor to processors array' do
+    it 'sets processor with provided proc' do
       processor = Proc.new { |data, cache| data }
 
       @transformer.register(processor)
-      @transformer.instance_variable_get('@processors').must_include processor
+
+      # must_equal bug with comparing procs, so use assert_equal instead
+      assert_equal @transformer.instance_variable_get('@processor'), processor
     end
   end
 
@@ -29,14 +27,14 @@ describe Drudgery::Transformer do
       @transformer.transform({ 'a' => 1 }).must_equal({ :a => 1 })
     end
 
-    it 'processes data in each processor' do
+    it 'processes data with processor' do
       processor = Proc.new { |data, cache| data[:b] = 2; data }
 
       @transformer.register(processor)
       @transformer.transform({ 'a' => 1 }).must_equal({ :a => 1, :b => 2 })
     end
 
-    it 'allows processors to use cache' do
+    it 'allows processor to use cache' do
       processor = Proc.new do |data, cache|
         cache[:a] ||= 0
         cache[:a] += data[:a]
@@ -49,12 +47,10 @@ describe Drudgery::Transformer do
       @transformer.instance_variable_get('@cache').must_equal({ :a => 6 })
     end
 
-    it 'skips remaining processors and returns nil if any processor returns nil' do
-      processor1 = Proc.new { |data, cache| nil }
-      processor2 = Proc.new { |data, cache| raise 'should not get here' }
+    it 'returns nil if any processor returns nil' do
+      processor = Proc.new { |data, cache| nil }
 
-      @transformer.register(processor1)
-      @transformer.register(processor2)
+      @transformer.register(processor)
       @transformer.transform({ 'a' => 1 }).must_be_nil
     end
   end

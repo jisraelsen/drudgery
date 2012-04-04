@@ -132,9 +132,9 @@ end
 source = []
 
 m = Drudgery::Manager.new
-job = Drudgery::Job.new(:extractor => ArrayExtractor.new(source))
 
-m.prepare(job) do |job|
+m.prepare do |job|
+  m.extract ArrayExtractor.new(source)
   m.load :csv, 'destination.csv'
 end
 ```
@@ -173,12 +173,12 @@ Transformers
 ------------
 
 Drudgery comes with a basic Transformer class.  It symbolizes the keys of
-each record and allows you to register processors to process data.  Registered
-processors should implement a `#call` method and return a `Hash` or `nil`.
+each record and allows you to register a processor to process data.  The
+processor should implement a `#call` method and return a `Hash` or `nil`.
 
 ```ruby
 custom_processor = Proc.new do |data, cache|
-  data[:initials] = data[:name].split(' ').map(&:capitalize)
+  data[:initials] = data[:name].split(' ').map(&:capitalize).join()
   data
 end
 
@@ -201,10 +201,10 @@ class CustomTransformer < Drudgery::Transformer
 end
 
 m = Drudgery::Manager.new
-job = Drudgery::Job.new(:transformer => CustomTransformer.new)
 
-m.prepare(job) do |job|
+m.prepare do |job|
   m.extract :csv, 'source.csv'
+  m.transform( CustomTransformer.new)
   m.load :csv, 'destination.csv'
 end
 ```
@@ -237,10 +237,10 @@ end
 destination = []
 
 m = Drudgery::Manager.new
-job = Drudgery::Job.new(:loader => ArrayLoader.new(destination))
 
-m.prepare(job) do |job|
+m.prepare do |job|
   m.extract :csv, 'source.csv'
+  m.load ArrayLoader.new(destination)
 end
 ```
 

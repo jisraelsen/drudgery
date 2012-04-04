@@ -3,29 +3,40 @@ module Drudgery
     def initialize(options={})
       @extractor    = options[:extractor]
       @loader       = options[:loader]
-      @transformer  = options[:transformer] || Drudgery::Transformer.new
+      @transformer  = options[:transformer]
+      @batch_size   = options[:batch_size] || 1000
 
-      @batch_size, @records = 1000, []
+      @records = []
     end
 
     def batch_size(size)
       @batch_size = size
     end
 
-    def extract(type, *args)
-      extractor = Drudgery::Extractors.instantiate(type, *args)
+    def extract(*args)
+      if args.first.kind_of?(Symbol)
+        extractor = Drudgery::Extractors.instantiate(*args)
+      else
+        extractor = args.first
+      end
 
       yield extractor if block_given?
 
       @extractor = extractor
     end
 
-    def transform(&processor)
-      @transformer.register(processor)
+    def transform(transformer=Drudgery::Transformer.new, &processor)
+      transformer.register(processor)
+
+      @transformer = transformer
     end
 
-    def load(type, *args)
-      loader = Drudgery::Loaders.instantiate(type, *args)
+    def load(*args)
+      if args.first.kind_of?(Symbol)
+        loader = Drudgery::Loaders.instantiate(*args)
+      else
+        loader = args.first
+      end
 
       yield loader if block_given?
 
@@ -47,7 +58,7 @@ module Drudgery
     private
     def extract_records
       @extractor.extract do |data|
-        record = @transformer.transform(data)
+        record = transform_data(data)
         next if record.nil?
 
         yield record
@@ -57,6 +68,14 @@ module Drudgery
     def load_records
       @loader.load(@records)
       @records.clear
+    end
+
+    def transform_data(data)
+      if @transformer
+        @transformer.transform(data)
+      else
+        data
+      end
     end
   end
 end
