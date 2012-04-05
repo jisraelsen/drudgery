@@ -128,20 +128,22 @@ describe Drudgery::Extractors::SQLite3Extractor do
       records[0].must_equal({ :a => 1 })
       records[1].must_equal({ :b => 2 })
     end
+  end
 
-    describe 'without stubs' do
-      before(:each) do
-        @db = SQLite3::Database.new(':memory:')
-        @db.execute('CREATE TABLE records (a INTEGER, b INTEGER)')
-        @db.execute('INSERT INTO records (a, b) VALUES (1, 2)');
-        @db.execute('INSERT INTO records (a, b) VALUES (3, 4)');
-        @db.execute('INSERT INTO records (a, b) VALUES (5, 6)');
-      end
+  describe 'without stubs' do
+    before(:each) do
+      @db = SQLite3::Database.new(':memory:')
+      @db.execute('CREATE TABLE records (a INTEGER, b INTEGER)')
+      @db.execute('INSERT INTO records (a, b) VALUES (1, 2)');
+      @db.execute('INSERT INTO records (a, b) VALUES (3, 4)');
+      @db.execute('INSERT INTO records (a, b) VALUES (3, 6)');
+    end
 
-      after(:each) do
-        @db.close
-      end
+    after(:each) do
+      @db.close
+    end
 
+    describe '#extract' do
       it 'yields each record as a hash' do
         extractor = Drudgery::Extractors::SQLite3Extractor.new(@db, 'records')
 
@@ -153,8 +155,26 @@ describe Drudgery::Extractors::SQLite3Extractor do
         records.must_equal([
           { 'a' => 1, 'b' => 2 },
           { 'a' => 3, 'b' => 4 },
-          { 'a' => 5, 'b' => 6 }
+          { 'a' => 3, 'b' => 6 }
         ])
+      end
+    end
+
+    describe '#record_count' do
+      describe 'with custom query' do
+        it 'returns count of query results' do
+          extractor = Drudgery::Extractors::SQLite3Extractor.new(@db, 'records')
+          extractor.where('a > 2')
+          extractor.group('a')
+          extractor.record_count.must_equal 1
+        end
+      end
+
+      describe 'without custom query' do
+        it 'returns count of table records' do
+          extractor = Drudgery::Extractors::SQLite3Extractor.new(@db, 'records')
+          extractor.record_count.must_equal 3
+        end
       end
     end
   end

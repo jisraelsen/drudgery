@@ -43,23 +43,26 @@ describe Drudgery::Extractors::ActiveRecordExtractor do
       records[1].must_equal({ :b => 2 })
     end
 
-    describe 'without stubs' do
-      before(:each) do
-        ActiveRecord::Base.establish_connection(:adapter => 'sqlite3', :database => ':memory:')
-        ActiveRecord::Base.connection.create_table(:records) do |t|
-          t.integer :a
-          t.integer :b
-        end
+  end
 
-        Record.create!({ :a => 1, :b => 2 })
-        Record.create!({ :a => 3, :b => 4 })
-        Record.create!({ :a => 5, :b => 6 })
+  describe 'without stubs' do
+    before(:each) do
+      ActiveRecord::Base.establish_connection(:adapter => 'sqlite3', :database => ':memory:')
+      ActiveRecord::Base.connection.create_table(:records) do |t|
+        t.integer :a
+        t.integer :b
       end
 
-      after(:each) do
-        ActiveRecord::Base.clear_active_connections!
-      end
+      Record.create!({ :a => 1, :b => 2 })
+      Record.create!({ :a => 3, :b => 4 })
+      Record.create!({ :a => 5, :b => 6 })
+    end
 
+    after(:each) do
+      ActiveRecord::Base.clear_active_connections!
+    end
+
+    describe '#extract' do
       it 'yields each record as a hash' do
         extractor = Drudgery::Extractors::ActiveRecordExtractor.new(Record)
 
@@ -73,6 +76,13 @@ describe Drudgery::Extractors::ActiveRecordExtractor do
           { 'id' => 2, 'a' => 3, 'b' => 4 },
           { 'id' => 3, 'a' => 5, 'b' => 6 }
         ])
+      end
+    end
+
+    describe '#record_count' do
+      it 'returns model count' do
+        extractor = Drudgery::Extractors::ActiveRecordExtractor.new(Record)
+        extractor.record_count.must_equal 3
       end
     end
   end

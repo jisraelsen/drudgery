@@ -10,6 +10,10 @@ module Drudgery
           yield record.attributes
         end
       end
+
+      def record_count
+        @record_count ||= @model.count
+      end
     end
   end
 end

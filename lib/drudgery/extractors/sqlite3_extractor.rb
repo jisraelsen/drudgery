@@ -45,6 +45,10 @@ module Drudgery
         end
       end
 
+      def record_count
+        @record_count ||= @db.get_first_value(count_sql)
+      end
+
       private
       def sql
         clauses = [
@@ -62,6 +66,14 @@ module Drudgery
         clauses << "ORDER BY #{@clauses[:order]}" if @clauses[:order]
 
         clauses.join(' ')
+      end
+
+      def count_sql
+        if @clauses.empty?
+          "SELECT COUNT(*) FROM #{@table}"
+        else
+          "SELECT COUNT(*) FROM (#{sql})"
+        end
       end
     end
   end
