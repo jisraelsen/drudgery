@@ -7,7 +7,7 @@ Gem::Specification.new do |s|
   s.version     = Drudgery::VERSION
   s.authors     = ['Jeremy Israelsen']
   s.email       = ['jisraelsen@gmail.com']
-  s.homepage    = 'http://github.com/jisraelsen/drudgery'
+  s.homepage    = 'http://jisraelsen.github.com/drudgery'
   s.summary     = 'Simple ETL Library'
   s.description = 'A simple ETL library that supports CSV, SQLite3, and ActiveRecord sources and destinations.'
 
