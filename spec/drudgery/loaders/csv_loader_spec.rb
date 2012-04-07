@@ -18,6 +18,11 @@ describe Drudgery::Loaders::CSVLoader do
       loader = Drudgery::Loaders::CSVLoader.new('file.csv', options)
       loader.instance_variable_get('@options').must_equal({ :col_sep => '|' })
     end
+
+    it 'sets name to csv:<file base name>' do
+      loader = Drudgery::Loaders::CSVLoader.new('tmp/file.csv')
+      loader.name.must_equal 'csv:file.csv'
+    end
   end
 
   describe '#load' do
@@ -33,7 +38,7 @@ describe Drudgery::Loaders::CSVLoader do
       record2 = { :a => 3, :b => 4 }
       record3 = { :a => 5, :b => 6 }
 
-      csv = mock
+      csv = mock('csv')
       csv.expects(:<<).with([:a, :b])
       csv.expects(:<<).with([1, 2])
       csv.expects(:<<).with([3, 4])
@@ -45,16 +50,18 @@ describe Drudgery::Loaders::CSVLoader do
       loader.load([record1, record2])
       loader.load([record3])
     end
+  end
 
-    describe 'without stubs' do
-      before(:each) do
-        File.delete('file.csv') if File.exists?('file.csv')
-      end
+  describe 'without stubs' do
+    before(:each) do
+      File.delete('file.csv') if File.exists?('file.csv')
+    end
 
-      after(:each) do
-        File.delete('file.csv') if File.exists?('file.csv')
-      end
+    after(:each) do
+      File.delete('file.csv') if File.exists?('file.csv')
+    end
 
+    describe '#load' do
       it 'writes hash keys as header and records as rows' do
         record1 = { :a => 1, :b => 2 }
         record2 = { :a => 3, :b => 4 }

@@ -2,9 +2,14 @@ require 'spec_helper'
 require 'sqlite3'
 
 describe Drudgery::Extractors::SQLite3Extractor do
+
+  def mock_db
+    stub('db', :database_list => [{ 'name' => 'main', 'file' => '' }], :results_as_hash= => nil, :type_translation= => nil)
+  end
+
   describe '#initialize' do
     it 'sets db and table to provided arguments' do
-      db = mock
+      db = mock_db
       db.expects(:results_as_hash=).with(true)
       db.expects(:type_translation=).with(true)
 
@@ -14,22 +19,31 @@ describe Drudgery::Extractors::SQLite3Extractor do
     end
 
     it 'initializes clauses hash' do
-      db = mock
-      db.stubs(:results_as_hash=)
-      db.stubs(:type_translation=)
-
-      extractor = Drudgery::Extractors::SQLite3Extractor.new(db, 'tablename')
+      extractor = Drudgery::Extractors::SQLite3Extractor.new(mock_db, 'tablename')
       extractor.instance_variable_get('@clauses').must_equal({})
+    end
+
+    describe 'with in memory db' do
+      it 'sets name to sqlite3:memory.<table name>' do
+        extractor = Drudgery::Extractors::SQLite3Extractor.new(mock_db, 'tablename')
+        extractor.name.must_equal 'sqlite3:memory.tablename'
+      end
+    end
+
+    describe 'with file based db' do
+      it 'sets name to sqlite3:<main db name>.<table name>' do
+        db = mock_db
+        db.expects(:database_list).returns([{ 'name' => 'main', 'file' => 'db/test.sqlite3.db' }])
+
+        extractor = Drudgery::Extractors::SQLite3Extractor.new(db, 'tablename')
+        extractor.name.must_equal 'sqlite3:test.tablename'
+      end
     end
   end
 
   describe 'query building' do
     before(:each) do
-      db = mock
-      db.stubs(:results_as_hash=)
-      db.stubs(:type_translation=)
-
-      @extractor = Drudgery::Extractors::SQLite3Extractor.new(db, 'tablename')
+      @extractor = Drudgery::Extractors::SQLite3Extractor.new(mock_db, 'tablename')
     end
 
     describe '#select' do
@@ -89,9 +103,7 @@ describe Drudgery::Extractors::SQLite3Extractor do
 
   describe '#extract' do
     it 'selects records from db using defined query' do
-      db = mock
-      db.stubs(:results_as_hash=)
-      db.stubs(:type_translation=)
+      db = mock_db
       db.expects(:execute).with('SELECT * FROM tablename')
       db.expects(:execute).with('SELECT age, count(*) AS nr_ages FROM tablename t table2 t2 ON t2.my_id = t.id WHERE age > 10 GROUP BY age HAVING count(*) > 1 ORDER BY nr_ages')
 
@@ -109,52 +121,85 @@ describe Drudgery::Extractors::SQLite3Extractor do
       extractor.extract
     end
 
-    it 'yields each record as a hash' do
+    it 'yields each record hash and index' do
       record1 = { :a => 1 }
       record2 = { :b => 2 }
 
-      db = mock
-      db.stubs(:results_as_hash=)
-      db.stubs(:type_translation=)
+      db = mock_db
       db.stubs(:execute).multiple_yields([record1], [record2])
 
       extractor = Drudgery::Extractors::SQLite3Extractor.new(db, 'tablename')
 
       records = []
-      extractor.extract do |record|
+      indexes = []
+      extractor.extract do |record, index|
         records << record
+        indexes << index
       end
 
       records[0].must_equal({ :a => 1 })
       records[1].must_equal({ :b => 2 })
+
+      indexes.must_equal [0, 1]
+    end
+  end
+
+  describe 'without stubs' do
+    before(:each) do
+      @db = SQLite3::Database.new(':memory:')
+      @db.execute('CREATE TABLE records (a INTEGER, b INTEGER)')
+      @db.execute('INSERT INTO records (a, b) VALUES (1, 2)');
+      @db.execute('INSERT INTO records (a, b) VALUES (3, 4)');
+      @db.execute('INSERT INTO records (a, b) VALUES (3, 6)');
     end
 
-    describe 'without stubs' do
-      before(:each) do
-        @db = SQLite3::Database.new(':memory:')
-        @db.execute('CREATE TABLE records (a INTEGER, b INTEGER)')
-        @db.execute('INSERT INTO records (a, b) VALUES (1, 2)');
-        @db.execute('INSERT INTO records (a, b) VALUES (3, 4)');
-        @db.execute('INSERT INTO records (a, b) VALUES (5, 6)');
-      end
+    after(:each) do
+      @db.close
+    end
 
-      after(:each) do
-        @db.close
+    describe '#initialize' do
+      it 'sets name to sqlite3:memory:records' do
+        extractor = Drudgery::Extractors::SQLite3Extractor.new(@db, 'records')
+        extractor.name.must_equal 'sqlite3:memory.records'
       end
+    end
 
-      it 'yields each record as a hash' do
+    describe '#extract' do
+      it 'yields each record hash and index' do
         extractor = Drudgery::Extractors::SQLite3Extractor.new(@db, 'records')
 
         records = []
-        extractor.extract do |record|
+        indexes = []
+        extractor.extract do |record, index|
           records << record
+          indexes << index
         end
 
         records.must_equal([
           { 'a' => 1, 'b' => 2 },
           { 'a' => 3, 'b' => 4 },
-          { 'a' => 5, 'b' => 6 }
+          { 'a' => 3, 'b' => 6 }
         ])
+
+        indexes.must_equal [0, 1, 2]
+      end
+    end
+
+    describe '#record_count' do
+      describe 'with custom query' do
+        it 'returns count of query results' do
+          extractor = Drudgery::Extractors::SQLite3Extractor.new(@db, 'records')
+          extractor.where('a > 2')
+          extractor.group('a')
+          extractor.record_count.must_equal 1
+        end
+      end
+
+      describe 'without custom query' do
+        it 'returns count of table records' do
+          extractor = Drudgery::Extractors::SQLite3Extractor.new(@db, 'records')
+          extractor.record_count.must_equal 3
+        end
       end
     end
   end

@@ -1,4 +1,10 @@
+require 'benchmark'
+require 'csv'
+require 'progressbar'
+
 require 'drudgery/version'
+require 'drudgery/job_progress'
+require 'drudgery/job_logger'
 require 'drudgery/manager'
 require 'drudgery/job'
 require 'drudgery/transformer'
@@ -13,6 +19,14 @@ require 'drudgery/loaders/csv_loader'
 require 'drudgery/loaders/sqlite3_loader'
 
 module Drudgery
+  class << self
+    attr_accessor :logger, :show_progress
+
+    def log(mode, message)
+      logger.send(mode, message) if logger
+    end
+  end
+
   module Extractors
     def self.instantiate(type, *args)
       case type
@@ -43,3 +57,5 @@ module Drudgery
     end
   end
 end
+
+Drudgery.show_progress = true
