@@ -111,10 +111,10 @@ m.run
 Logging
 -------
 
-Provide Drudgery with a logger and you will info logged about each job.
+Provide Drudgery with a logger and info will be logged about each job.
 
-When log level is `INFO` expect to see basic output for each job, e.g.
-when the job starts and how long it took to complete.
+When log level is `INFO` expect to see basic output for each job (e.g.
+when it starts and completes).
 
 ```ruby
 logger = Logger.new('log/etl.log')
