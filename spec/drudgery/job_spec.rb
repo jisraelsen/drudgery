@@ -255,15 +255,21 @@ describe Drudgery::Job do
     end
   end
 
+  def mock_logger
+    stub('job_logger', :log => nil, :log_with_progress => nil)
+  end
+
   def stub_logging
-    Drudgery.stubs(:log)
+    
   end
 
   describe '#perform' do
-    it 'extracts records from extractor' do
+    before(:each) do 
       Drudgery.show_progress = false
-      stub_logging
+      Drudgery::JobLogger.stubs(:new).returns(mock_logger)
+    end
 
+    it 'extracts records from extractor' do
       extractor = stub('extractor', :record_count => 1, :name => 'extractor')
       extractor.expects(:extract).yields([{ 'a' => 1 }, 0])
 
@@ -275,9 +281,6 @@ describe Drudgery::Job do
     end
 
     it 'transforms records with transformer' do
-      Drudgery.show_progress = false
-      stub_logging
-
       extractor = stub('extractor', :record_count => 1, :name => 'extractor')
       extractor.stubs(:extract).yields([{ 'a' => 1 }, 0])
 
@@ -292,9 +295,6 @@ describe Drudgery::Job do
     end
 
     it 'skips nil records' do
-      Drudgery.show_progress = false
-      stub_logging
-
       extractor = stub('extractor', :record_count => 1, :name => 'extractor')
       extractor.stubs(:extract).yields([{ 'a' => 1 }, 0])
 
@@ -310,9 +310,6 @@ describe Drudgery::Job do
     end
 
     it 'does not load empty records' do
-      Drudgery.show_progress = false
-      stub_logging
-
       extractor = stub('extractor', :record_count => 1, :name => 'extractor')
       extractor.stubs(:extract)
 
@@ -325,9 +322,6 @@ describe Drudgery::Job do
     end
 
     it 'loads records with loader in batches' do
-      Drudgery.show_progress = false
-      stub_logging
-
       extractor = stub('extractor', :record_count => 3, :name => 'extractor')
       extractor.stubs(:extract).multiple_yields([{ 'a' => 1 }, 0], [{ 'b' => 2 }, 1], [{ 'c' => 3 }, 2])
 
@@ -344,7 +338,6 @@ describe Drudgery::Job do
     describe 'with progress on' do
       it 'tracks progress information' do
         Drudgery.show_progress = true
-        stub_logging
 
         extractor = stub('extractor', :record_count => 3, :name => 'extractor')
         extractor.stubs(:extract).multiple_yields([{ 'a' => 1 }, 0], [{ 'b' => 2 }, 1], [{ 'c' => 3 }, 2])
@@ -353,28 +346,18 @@ describe Drudgery::Job do
 
         job = Drudgery::Job.new(:extractor => extractor, :loader => loader)
 
-        job_prefix = "## JOB #{job.id}"
-
-        progressbar = mock('progressbar') do
-          expects(:title_width=).with(job_prefix.length + 1)
+        progress = mock('job_progress') do
           expects(:inc).times(3)
           expects(:finish)
         end
-        ProgressBar.stubs(:new).with(job_prefix, 3).returns(progressbar)
-
-        Benchmark.stubs(:realtime).returns(5.212121).yields
-        STDERR.expects(:puts).with("#{job_prefix}: extractor => loader")
-        STDERR.expects(:puts).with("#{job_prefix}: Completed in 5.21s\n\n")
+        Drudgery::JobProgress.stubs(:new).with(job.id, 3).returns(progress)
 
         job.perform
       end
     end
 
     describe 'with progress off' do
-      it 'tracks progress information' do
-        Drudgery.show_progress = false
-        stub_logging
-
+      it 'does not track progress information' do
         extractor = stub('extractor', :record_count => 3, :name => 'extractor')
         extractor.stubs(:extract).multiple_yields([{ 'a' => 1 }, 0], [{ 'b' => 2 }, 1], [{ 'c' => 3 }, 2])
 
@@ -382,16 +365,13 @@ describe Drudgery::Job do
 
         job = Drudgery::Job.new(:extractor => extractor, :loader => loader)
 
-        STDERR.expects(:puts).never
-        ProgressBar.expects(:new).never
+        Drudgery::JobProgress.expects(:new).never
 
         job.perform
       end
     end
 
     it 'logs job details' do
-      Drudgery.show_progress = false
-
       extractor = stub('extractor', :record_count => 3, :name => 'extractor')
       extractor.stubs(:extract).multiple_yields([{ 'a' => 1 }, 0], [{ 'b' => 2 }, 1], [{ 'c' => 3 }, 2])
 
@@ -400,30 +380,32 @@ describe Drudgery::Job do
       job = Drudgery::Job.new(:extractor => extractor, :loader => loader)
       job.batch_size 2
 
-      job_prefix = "## JOB #{job.id}"
-
       Benchmark.stubs(:realtime).returns(1.25333).yields
-      Drudgery.expects(:log).with(:info,  "#{job_prefix}: extractor => loader")
 
-      Drudgery.expects(:log).with(:debug, "#{job_prefix}: Extracting Record -- Index: 0")
-      Drudgery.expects(:log).with(:debug, "#{job_prefix}: #{{ 'a' => 1 }.inspect}")
-      Drudgery.expects(:log).with(:debug, "#{job_prefix}: Transforming Record -- Index: 0")
-      Drudgery.expects(:log).with(:debug, "#{job_prefix}: #{{ 'a' => 1 }.inspect}")
-      Drudgery.expects(:log).with(:debug, "#{job_prefix}: Extracting Record -- Index: 1")
-      Drudgery.expects(:log).with(:debug, "#{job_prefix}: #{{ 'b' => 2 }.inspect}")
-      Drudgery.expects(:log).with(:debug, "#{job_prefix}: Transforming Record -- Index: 1")
-      Drudgery.expects(:log).with(:debug, "#{job_prefix}: #{{ 'b' => 2 }.inspect}")
-      Drudgery.expects(:log).with(:debug, "#{job_prefix}: Loading Records -- Count: 2")
-      Drudgery.expects(:log).with(:debug, "#{job_prefix}: #{[{ 'a' => 1 }, { 'b' => 2 }].inspect}")
+      logger = mock_logger
+      logger.expects(:log_with_progress).with(:info,  "extractor => loader")
 
-      Drudgery.expects(:log).with(:debug, "#{job_prefix}: Extracting Record -- Index: 2")
-      Drudgery.expects(:log).with(:debug, "#{job_prefix}: #{{ 'c' => 3 }.inspect}")
-      Drudgery.expects(:log).with(:debug, "#{job_prefix}: Transforming Record -- Index: 2")
-      Drudgery.expects(:log).with(:debug, "#{job_prefix}: #{{ 'c' => 3 }.inspect}")
-      Drudgery.expects(:log).with(:debug, "#{job_prefix}: Loading Records -- Count: 1")
-      Drudgery.expects(:log).with(:debug, "#{job_prefix}: #{[{ 'c' => 3 }].inspect}")
+      logger.expects(:log).with(:debug, "Extracting Record -- Index: 0")
+      logger.expects(:log).with(:debug, "#{{ 'a' => 1 }.inspect}")
+      logger.expects(:log).with(:debug, "Transforming Record -- Index: 0")
+      logger.expects(:log).with(:debug, "#{{ 'a' => 1 }.inspect}")
+      logger.expects(:log).with(:debug, "Extracting Record -- Index: 1")
+      logger.expects(:log).with(:debug, "#{{ 'b' => 2 }.inspect}")
+      logger.expects(:log).with(:debug, "Transforming Record -- Index: 1")
+      logger.expects(:log).with(:debug, "#{{ 'b' => 2 }.inspect}")
+      logger.expects(:log).with(:debug, "Loading Records -- Count: 2")
+      logger.expects(:log).with(:debug, "#{[{ 'a' => 1 }, { 'b' => 2 }].inspect}")
 
-      Drudgery.expects(:log).with(:info,  "#{job_prefix}: Completed in 1.25s\n\n")
+      logger.expects(:log).with(:debug, "Extracting Record -- Index: 2")
+      logger.expects(:log).with(:debug, "#{{ 'c' => 3 }.inspect}")
+      logger.expects(:log).with(:debug, "Transforming Record -- Index: 2")
+      logger.expects(:log).with(:debug, "#{{ 'c' => 3 }.inspect}")
+      logger.expects(:log).with(:debug, "Loading Records -- Count: 1")
+      logger.expects(:log).with(:debug, "#{[{ 'c' => 3 }].inspect}")
+
+      logger.expects(:log_with_progress).with(:info,  "Completed in 1.25s\n\n")
+
+      Drudgery::JobLogger.stubs(:new).returns(logger)
 
       job.perform
     end

@@ -51,7 +51,7 @@ module Drudgery
     end
 
     def perform
-      log_with_progress :info, name
+      logger.log_with_progress :info, name
 
       elapsed = Benchmark.realtime do
         extract_records do |record|
@@ -69,18 +69,18 @@ module Drudgery
         progress.finish if Drudgery.show_progress
       end
 
-      log_with_progress :info, "Completed in #{"%.2f" % elapsed}s\n\n"
+      logger.log_with_progress :info, "Completed in #{"%.2f" % elapsed}s\n\n"
     end
 
     private
     def extract_records
       @extractor.extract do |data, index|
-        log :debug, "Extracting Record -- Index: #{index}"
-        log :debug, data.inspect
+        logger.log :debug, "Extracting Record -- Index: #{index}"
+        logger.log :debug, data.inspect
 
         record = transform_data(data)
-        log :debug, "Transforming Record -- Index: #{index}"
-        log :debug, data.inspect
+        logger.log :debug, "Transforming Record -- Index: #{index}"
+        logger.log :debug, data.inspect
 
         if record.nil?
           next
@@ -91,11 +91,10 @@ module Drudgery
     end
 
     def load_records
-      return if @records.empty?
-      log :debug, "Loading Records -- Count: #{@records.size}"
-      log :debug, @records.inspect
+      logger.log :debug, "Loading Records -- Count: #{@records.size}"
+      logger.log :debug, @records.inspect
 
-      @loader.load(@records)
+      @loader.load(@records) unless @records.empty?
       @records.clear
     end
 
@@ -108,29 +107,11 @@ module Drudgery
     end
 
     def progress
-      unless @progress
-        @progress = ProgressBar.new(log_prefix, @extractor.record_count)
-        @progress.title_width = log_prefix.length + 1
-      end
-
-      @progress
+      @progress ||= Drudgery::JobProgress.new(id, @extractor.record_count)
     end
 
-    def log_prefix
-      "## JOB #{id}"
-    end
-
-    def format_message(message)
-      "#{log_prefix}: #{message}"
-    end
-
-    def log_with_progress(mode, message)
-      STDERR.puts format_message(message) if Drudgery.show_progress
-      log(mode, message)
-    end
-
-    def log(mode, message)
-      Drudgery.log mode, format_message(message)
+    def logger
+      @logger ||= Drudgery::JobLogger.new(id)
     end
   end
 end
