@@ -1,13 +1,15 @@
-require 'csv'
-
 module Drudgery
   module Loaders
     class CSVLoader
+      attr_reader :name
+
       def initialize(filepath, options={})
         @filepath = filepath
         @options = options
 
         @write_headers = true
+
+        @name = "csv:#{File.basename(@filepath)}"
       end
 
       def load(records)

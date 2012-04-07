@@ -1,6 +1,8 @@
 module Drudgery
   module Extractors
     class SQLite3Extractor
+      attr_reader :name
+
       def initialize(db, table)
         @db = db
         @db.results_as_hash = true
@@ -8,6 +10,8 @@ module Drudgery
 
         @table = table
         @clauses = {}
+
+        @name = "sqlite3:#{main_db_name}.#{@table}"
       end
 
       def select(*expressions)
@@ -39,9 +43,13 @@ module Drudgery
       end
 
       def extract
+        index = 0
+
         @db.execute(sql) do |row|
           row.reject! { |key, value| key.kind_of?(Integer) }
-          yield row
+          yield [row, index]
+
+          index += 1
         end
       end
 
@@ -73,6 +81,16 @@ module Drudgery
           "SELECT COUNT(*) FROM #{@table}"
         else
           "SELECT COUNT(*) FROM (#{sql})"
+        end
+      end
+
+      def main_db_name
+        main = @db.database_list.detect { |list| list['name'] == 'main' }
+
+        if main['file'].empty?
+          'memory'
+        else
+          File.basename(main['file']).split('.').first
         end
       end
     end

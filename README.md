@@ -108,24 +108,66 @@ end
 m.run
 ```
 
+Logging
+-------
+
+Provide Drudgery with a logger and you will info logged about each job.
+
+When log level is `INFO` expect to see basic output for each job, e.g.
+when the job starts and how long it took to complete.
+
+```ruby
+logger = Logger.new('log/etl.log')
+logger.level = Logger::INFO # Logger defaults to log level DEBUG
+
+Drudgery.logger = logger
+```
+
+When log level is `DEBUG` expect to see output for each record
+extracted, transformed and loaded (VERY NOISY).
+
+Progress
+--------
+
+Drudgery also provides progress output to STDERR courtesty of the
+`progressbar` gem.  Progress output is on by default, but can be
+disabled with the following:
+
+```ruby
+Drudgery.show_progress = false
+```
+
 Extractors
 ----------
 
 The following extractors are provided: `:csv`, `:sqlite3`, `:active_record`
 
-You can use your own extractors if you would like.  They need only
-implement an `#extract` method that yields each record:
+You can use your own extractors if you would like.  They need to
+implement the following methods:
+
+ * `#name` - returns extractor's name
+ * `#record_count` - returns count of records in source
+ * `#extract` - must yield each record and record index
 
 ```ruby
 class ArrayExtractor
+  attr_reader :name
+
   def initialize(source)
     @source = source
+    @name = 'array'
   end
 
   def extract
+    index = 0
     @source.each do |record|
-      yield record
-    end    
+      yield [record, index]
+      index += 1
+    end
+  end
+
+  def record_count
+    @source.size
   end
 end
 
@@ -146,14 +188,23 @@ namespace:
 module Drudgery
   module Extractors
     class ArrayExtractor
+      attr_reader :name
+
       def initialize(source)
         @source = source
+        @name = 'array'
       end
 
       def extract
+        index = 0
         @source.each do |record|
-          yield record
+          yield [record, index]
+          index += 1
         end
+      end
+
+      def record_count
+        @source.size
       end
     end
   end
@@ -219,14 +270,20 @@ The following loaders are provided:
  * `:active_record`
  * `:active_record_import`
 
-You can use your own loaders if you would like.  They need only
-implement a `#load` method that accepts an array of records as an
-argument and then writes/inserts them to the destination.
+You can use your own loaders if you would like.  They need to implement
+the following methods:
+
+* `#name` - returns the loader's name
+* `#load` - accepts an array of records and then write them to the
+  destination
 
 ```ruby
 class ArrayLoader
+  attr_reader :name
+
   def initialize(destination)
     @destination = destination
+    @name = 'array'
   end
 
   def load(records)
@@ -251,8 +308,11 @@ namespace:
 module Drudgery
   module Loaders
     class ArrayLoader
+      attr_reader :name
+
       def initialize(destination)
         @destination = destination
+        @name = 'array'
       end
 
       def load(records)

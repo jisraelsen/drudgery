@@ -1,17 +1,22 @@
-require 'csv'
-
 module Drudgery
   module Extractors
     class CSVExtractor
+      attr_reader :name
+
       def initialize(filepath, options={})
         @filepath = filepath
-        @options = { :headers => true }
-        @options.merge!(options)
+        @options = { :headers => true }.merge(options)
+
+        @name = "csv:#{File.basename(@filepath)}"
       end
 
       def extract
+        index = 0
+
         CSV.foreach(@filepath, @options) do |row|
-          yield row.to_hash
+          yield [row.to_hash, index]
+
+          index += 1
         end
       end
 
@@ -23,7 +28,7 @@ module Drudgery
       def calculate_record_count
         record_count = 0
 
-        extract do |row|
+        extract do |data, index|
           record_count += 1
         end
 

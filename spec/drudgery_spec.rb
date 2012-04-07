@@ -1,5 +1,33 @@
 require 'spec_helper'
 
+describe Drudgery do
+  describe '.log' do
+    after(:each) do
+      Drudgery.logger = nil
+    end
+
+    describe 'if logger defined' do
+      it 'sends mode and message to logger' do
+        logger = mock('logger')
+        logger.expects(:send).with(:debug, "Some message")
+        Drudgery.logger = logger
+
+        Drudgery.log :debug, "Some message"
+      end
+    end
+
+    describe 'if no logger defined' do
+      it 'ignores mode and message' do
+        logger = mock('logger')
+        logger.expects(:send).never
+        Drudgery.logger = nil
+
+        Drudgery.log :debug, "Some message"
+      end
+    end
+  end
+end
+
 describe Drudgery::Extractors do
   describe '.instantiate' do
     it 'initializes extractor of type with args' do
@@ -9,7 +37,7 @@ describe Drudgery::Extractors do
       Drudgery::Extractors::SQLite3Extractor.expects(:new).with('db.sqlite3', 'tablename')
       Drudgery::Extractors.instantiate(:sqlite3, 'db.sqlite3', 'tablename')
 
-      model = mock
+      model = stub('model')
       Drudgery::Extractors::ActiveRecordExtractor.expects(:new).with(model)
       Drudgery::Extractors.instantiate(:active_record, model)
     end
@@ -30,7 +58,7 @@ describe Drudgery::Loaders do
       Drudgery::Loaders::SQLite3Loader.expects(:new).with('db.sqlite3', 'tablename')
       Drudgery::Loaders.instantiate(:sqlite3, 'db.sqlite3', 'tablename')
 
-      model = mock
+      model = stub('model')
       Drudgery::Loaders::ActiveRecordLoader.expects(:new).with(model)
       Drudgery::Loaders.instantiate(:active_record, model)
 

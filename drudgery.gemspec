@@ -19,6 +19,8 @@ Gem::Specification.new do |s|
   s.test_files    = `git ls-files -- spec/*`.split("\n")
   s.require_path  = 'lib'
 
+  s.add_dependency 'progressbar', '~> 0.10'
+
   s.add_development_dependency 'rake'
   s.add_development_dependency 'bundler',             '~> 1.1'
   s.add_development_dependency 'mocha',               '~> 0.10'

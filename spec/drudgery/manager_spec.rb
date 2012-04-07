@@ -13,7 +13,7 @@ describe Drudgery::Manager do
 
   describe '#prepare' do
     it 'adds obj to jobs array' do
-      job = mock
+      job = stub('job')
 
       @manager.prepare(job)
       @manager.instance_variable_get('@jobs').must_include job
@@ -22,13 +22,9 @@ describe Drudgery::Manager do
 
   describe '#run' do
     it 'performs each job' do
-      job1 = mock
-      job1.expects(:perform)
-
-      job2 = mock
-      job2.expects(:perform)
-
-      job3 = mock
+      job1 = mock('job1', :perform => nil)
+      job2 = mock('job2', :perform => nil)
+      job3 = mock('job3')
       job3.expects(:perform).never
 
       @manager.prepare(job1)

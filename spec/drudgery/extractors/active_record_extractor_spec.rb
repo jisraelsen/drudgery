@@ -4,43 +4,53 @@ require 'active_record'
 describe Drudgery::Extractors::ActiveRecordExtractor do
   class Record < ActiveRecord::Base; end
 
+  def mock_model
+    stub('model', :name => 'Record')
+  end
+
   describe '#initialize' do
     it 'sets model to provided argument' do
-      model = mock
+      model = mock_model
 
       extractor = Drudgery::Extractors::ActiveRecordExtractor.new(model)
       extractor.instance_variable_get('@model').must_equal model
+    end
+
+    it 'sets name to active_record:<model name>' do
+      extractor = Drudgery::Extractors::ActiveRecordExtractor.new(mock_model)
+      extractor.name.must_equal 'active_record:Record'
     end
   end
 
   describe '#extract' do
     it 'finds records using model' do
-      model = mock
+      model = mock_model
       model.expects(:find_each)
 
       extractor = Drudgery::Extractors::ActiveRecordExtractor.new(model)
       extractor.extract
     end
 
-    it 'yields each record as a hash' do
-      record1 = mock
-      record1.expects(:attributes).returns({ :a => 1 })
+    it 'yields each record hash and index' do
+      record1 = mock('record1', :attributes => { :a => 1 })
+      record2 = mock('record2', :attributes => { :b => 2 })
 
-      record2 = mock
-      record2.expects(:attributes).returns({ :b => 2 })
-
-      model = mock
+      model = mock_model
       model.stubs(:find_each).multiple_yields([record1], [record2])
 
       extractor = Drudgery::Extractors::ActiveRecordExtractor.new(model)
 
       records = []
-      extractor.extract do |record|
+      indexes = []
+      extractor.extract do |record, index|
         records << record
+        indexes << index
       end
 
       records[0].must_equal({ :a => 1 })
       records[1].must_equal({ :b => 2 })
+
+      indexes.must_equal [0, 1]
     end
 
   end
@@ -63,12 +73,14 @@ describe Drudgery::Extractors::ActiveRecordExtractor do
     end
 
     describe '#extract' do
-      it 'yields each record as a hash' do
+      it 'yields each record hash and index' do
         extractor = Drudgery::Extractors::ActiveRecordExtractor.new(Record)
 
         records = []
-        extractor.extract do |record|
+        indexes = []
+        extractor.extract do |record, index|
           records << record
+          indexes << index
         end
 
         records.must_equal([
@@ -76,6 +88,8 @@ describe Drudgery::Extractors::ActiveRecordExtractor do
           { 'id' => 2, 'a' => 3, 'b' => 4 },
           { 'id' => 3, 'a' => 5, 'b' => 6 }
         ])
+
+        indexes.must_equal [0, 1, 2]
       end
     end
 
