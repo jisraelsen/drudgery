@@ -18,6 +18,11 @@ describe Drudgery::Extractors::CSVExtractor do
       extractor = Drudgery::Extractors::CSVExtractor.new('file.csv', options)
       extractor.instance_variable_get('@options').must_equal({ :col_sep => '|', :headers => %w[id name email] })
     end
+
+    it 'sets name to csv:<file base name>' do
+      extractor = Drudgery::Extractors::CSVExtractor.new('tmp/file.csv')
+      extractor.name.must_equal 'csv:file.csv'
+    end
   end
 
   describe '#extract' do
@@ -28,11 +33,11 @@ describe Drudgery::Extractors::CSVExtractor do
       extractor.extract
     end
 
-    it 'yields each record as a hash' do
-      record1 = mock
+    it 'yields each record hash and index' do
+      record1 = mock('record1')
       record1.expects(:to_hash).returns({ :a => 1 })
 
-      record2 = mock
+      record2 = mock('record2')
       record2.expects(:to_hash).returns({ :b => 2 })
 
       CSV.stubs(:foreach).multiple_yields([record1], [record2])
@@ -40,36 +45,44 @@ describe Drudgery::Extractors::CSVExtractor do
       extractor = Drudgery::Extractors::CSVExtractor.new('file.csv')
 
       records = []
-      extractor.extract do |record|
+      indexes = []
+      extractor.extract do |record, index|
         records << record
+        indexes << index
       end
 
       records[0].must_equal({ :a => 1 })
       records[1].must_equal({ :b => 2 })
+
+      indexes.must_equal [0, 1]
+    end
+  end
+
+  describe 'without stubs' do
+    before(:each) do
+      File.delete('file.csv') if File.exists?('file.csv')
+
+      File.open('file.csv', 'w') do |f|
+        f.puts 'a,b'
+        f.puts '1,2'
+        f.puts '3,4'
+        f.puts '5,6'
+      end
     end
 
-    describe 'without stubs' do
-      before(:each) do
-        File.delete('file.csv') if File.exists?('file.csv')
-      end
+    after(:each) do
+      File.delete('file.csv') if File.exists?('file.csv')
+    end
 
-      after(:each) do
-        File.delete('file.csv') if File.exists?('file.csv')
-      end
-
-      it 'writes hash keys as header and records as rows' do
-        File.open('file.csv', 'w') do |f|
-          f.puts 'a,b'
-          f.puts '1,2'
-          f.puts '3,4'
-          f.puts '5,6'
-        end
-
+    describe '#extract' do
+      it 'yields each record hash and index' do
         extractor = Drudgery::Extractors::CSVExtractor.new('file.csv')
 
         records = []
-        extractor.extract do |record|
+        indexes = []
+        extractor.extract do |record, index|
           records << record
+          indexes << index
         end
 
         records.must_equal([
@@ -77,6 +90,15 @@ describe Drudgery::Extractors::CSVExtractor do
           { 'a' => '3', 'b' => '4' },
           { 'a' => '5', 'b' => '6' }
         ])
+
+        indexes.must_equal [0, 1, 2]
+      end
+    end
+
+    describe '#record_count' do
+      it 'returns count of CSV rows' do
+        extractor = Drudgery::Extractors::CSVExtractor.new('file.csv')
+        extractor.record_count.must_equal 3
       end
     end
   end

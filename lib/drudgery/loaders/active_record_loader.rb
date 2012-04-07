@@ -1,8 +1,11 @@
 module Drudgery
   module Loaders
     class ActiveRecordLoader
+      attr_reader :name
+
       def initialize(model)
         @model = model
+        @name = "active_record:#{@model.name}"
       end
 
       def load(records)
