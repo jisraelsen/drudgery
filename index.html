@@ -1,0 +1,405 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Drudgery by jisraelsen</title>
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+    <script src="javascripts/respond.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <!--[if lt IE 8]>
+    <link rel="stylesheet" href="stylesheets/ie.css">
+    <![endif]-->
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+
+  </head>
+  <body>
+
+      <div id="header">
+        <nav>
+          <li class="fork"><a href="https://github.com/jisraelsen/drudgery">Fork On GitHub</a></li>
+          <li class="downloads"><a href="https://github.com/jisraelsen/drudgery/zipball/master">ZIP</a></li>
+          <li class="downloads"><a href="https://github.com/jisraelsen/drudgery/tarball/master">TAR</a></li>
+          <li class="title">DOWNLOADS</li>
+        </nav>
+      </div><!-- end header -->
+
+    <div class="wrapper">
+
+      <section>
+        <div id="title">
+          <h1>Drudgery</h1>
+          <p>A simple ETL library</p>
+          <hr>
+          <span class="credits left">Project maintained by <a href="https://github.com/jisraelsen">jisraelsen</a></span>
+          <span class="credits right">Hosted on GitHub Pages &mdash; Theme by <a href="http://twitter.com/#!/michigangraham">mattgraham</a></span>
+        </div>
+
+        <p>Drudgery is a simple ETL library that supports the following sources/destinations:</p>
+
+<ul>
+<li>CSV and other delimited file formats (e.g. pipe, tab, etc)</li>
+<li>SQLite3</li>
+<li>ActiveRecord (bulk insert support using activerecord-import)</li>
+</ul><p>Supported Rubies:</p>
+
+<ul>
+<li>Ruby 1.9.2, 1.9.3</li>
+</ul><h2>Install</h2>
+
+<p>Install the gem directly:</p>
+
+<div class="highlight">
+<pre>gem install drudgery
+</pre>
+</div>
+
+
+<p>Or, add it to your Gemfile:</p>
+
+<div class="highlight">
+<pre><span class="n">gem</span> <span class="s1">'drudgery'</span>
+</pre>
+</div>
+
+
+<p>And, if using the <code>:sqlite3</code> extractor or loader:</p>
+
+<div class="highlight">
+<pre><span class="n">gem</span> <span class="s1">'sqlite3'</span><span class="p">,</span> <span class="s1">'~&gt; 1.3'</span>
+</pre>
+</div>
+
+
+<p>And, if using the <code>:active_record</code> extractor or loader:</p>
+
+<div class="highlight">
+<pre><span class="n">gem</span> <span class="s1">'activerecord'</span><span class="p">,</span> <span class="s1">'~&gt; 3.0'</span>
+</pre>
+</div>
+
+
+<p>And, if using the <code>:active_record_import</code> loader:</p>
+
+<div class="highlight">
+<pre><span class="n">gem</span> <span class="s1">'activerecord-import'</span><span class="p">,</span> <span class="s1">'&gt;= 0.2.9'</span>
+</pre>
+</div>
+
+
+<h2>Usage</h2>
+
+<p>Extracting from CSV and loading into ActiveRecord:</p>
+
+<div class="highlight">
+<pre><span class="n">m</span> <span class="o">=</span> <span class="no">Drudgery</span><span class="o">::</span><span class="no">Manager</span><span class="o">.</span><span class="n">new</span>
+
+<span class="n">m</span><span class="o">.</span><span class="n">prepare</span> <span class="k">do</span> <span class="o">|</span><span class="n">job</span><span class="o">|</span>
+  <span class="n">job</span><span class="o">.</span><span class="n">extract</span> <span class="ss">:csv</span><span class="p">,</span> <span class="s1">'src/addresses.csv'</span>
+
+  <span class="n">job</span><span class="o">.</span><span class="n">transform</span> <span class="k">do</span> <span class="o">|</span><span class="n">data</span><span class="p">,</span> <span class="n">cache</span><span class="o">|</span>
+    <span class="n">first_name</span><span class="p">,</span> <span class="n">last_name</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="ss">:name</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">' '</span><span class="p">)</span>
+
+    <span class="n">data</span><span class="o">[</span><span class="ss">:first_name</span><span class="o">]</span> <span class="o">=</span> <span class="n">first_name</span>
+    <span class="n">data</span><span class="o">[</span><span class="ss">:last_name</span><span class="o">]</span>  <span class="o">=</span> <span class="n">last_name</span>
+    <span class="n">data</span><span class="o">[</span><span class="ss">:state</span><span class="o">]</span>      <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="ss">:state_abbr</span><span class="p">)</span>
+
+    <span class="n">data</span>
+  <span class="k">end</span>
+
+  <span class="n">job</span><span class="o">.</span><span class="n">load</span> <span class="ss">:active_record</span><span class="p">,</span> <span class="no">Address</span>
+<span class="k">end</span>
+
+<span class="n">m</span><span class="o">.</span><span class="n">run</span>
+</pre>
+</div>
+
+
+<p>Extracting from SQLite3 and bulk loading into ActiveRecord:</p>
+
+<div class="highlight">
+<pre><span class="n">db</span> <span class="o">=</span> <span class="no">SQLite3</span><span class="o">::</span><span class="no">Database</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="s1">'db.sqlite3'</span><span class="p">)</span>
+
+<span class="n">m</span> <span class="o">=</span> <span class="no">Drudgery</span><span class="o">::</span><span class="no">Manager</span><span class="o">.</span><span class="n">new</span>
+
+<span class="n">m</span><span class="o">.</span><span class="n">prepare</span> <span class="k">do</span> <span class="o">|</span><span class="n">job</span><span class="o">|</span>
+  <span class="n">job</span><span class="o">.</span><span class="n">batch_size</span> <span class="mi">5000</span>
+
+  <span class="n">job</span><span class="o">.</span><span class="n">extract</span> <span class="ss">:sqlite3</span><span class="p">,</span> <span class="n">db</span><span class="p">,</span> <span class="s1">'addresses'</span> <span class="k">do</span> <span class="o">|</span><span class="n">extractor</span><span class="o">|</span>
+    <span class="n">extractor</span><span class="o">.</span><span class="n">select</span><span class="p">(</span>
+      <span class="s1">'name'</span><span class="p">,</span>
+      <span class="s1">'street_address'</span><span class="p">,</span>
+      <span class="s1">'city'</span><span class="p">,</span>
+      <span class="s1">'state_abbr AS state'</span><span class="p">,</span>
+      <span class="s1">'zip'</span>
+    <span class="p">)</span>
+    <span class="n">extractor</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="s2">"state LIKE 'A%'"</span><span class="p">)</span>
+    <span class="n">extractor</span><span class="o">.</span><span class="n">order</span><span class="p">(</span><span class="s1">'name'</span><span class="p">)</span>
+  <span class="k">end</span>
+
+  <span class="n">job</span><span class="o">.</span><span class="n">transform</span> <span class="k">do</span> <span class="o">|</span><span class="n">data</span><span class="p">,</span> <span class="n">cache</span><span class="o">|</span>
+    <span class="n">first_name</span><span class="p">,</span> <span class="n">last_name</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="ss">:name</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">' '</span><span class="p">)</span>
+
+    <span class="n">data</span><span class="o">[</span><span class="ss">:first_name</span><span class="o">]</span> <span class="o">=</span> <span class="n">first_name</span>
+    <span class="n">data</span><span class="o">[</span><span class="ss">:last_name</span><span class="o">]</span>  <span class="o">=</span> <span class="n">last_name</span>
+
+    <span class="n">data</span>
+  <span class="k">end</span>
+
+  <span class="n">job</span><span class="o">.</span><span class="n">load</span> <span class="ss">:active_record_import</span><span class="p">,</span> <span class="no">Address</span>
+<span class="k">end</span>
+
+<span class="n">m</span><span class="o">.</span><span class="n">run</span>
+</pre>
+</div>
+
+
+<h2>Logging</h2>
+
+<p>Provide Drudgery with a logger and info will be logged about each job.</p>
+
+<p>When log level is <code>INFO</code> expect to see basic output for each job (e.g.
+when it starts and completes).</p>
+
+<div class="highlight">
+<pre><span class="n">logger</span> <span class="o">=</span> <span class="no">Logger</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="s1">'log/etl.log'</span><span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">level</span> <span class="o">=</span> <span class="no">Logger</span><span class="o">::</span><span class="no">INFO</span> <span class="c1"># Logger defaults to log level DEBUG</span>
+
+<span class="no">Drudgery</span><span class="o">.</span><span class="n">logger</span> <span class="o">=</span> <span class="n">logger</span>
+</pre>
+</div>
+
+
+<p>When log level is <code>DEBUG</code> expect to see output for each record
+extracted, transformed and loaded (VERY NOISY).</p>
+
+<h2>Progress</h2>
+
+<p>Drudgery also provides progress output to STDERR courtesty of the
+<code>progressbar</code> gem.  Progress output is on by default, but can be
+disabled with the following:</p>
+
+<div class="highlight">
+<pre><span class="no">Drudgery</span><span class="o">.</span><span class="n">show_progress</span> <span class="o">=</span> <span class="kp">false</span>
+</pre>
+</div>
+
+
+<h2>Extractors</h2>
+
+<p>The following extractors are provided: <code>:csv</code>, <code>:sqlite3</code>, <code>:active_record</code></p>
+
+<p>You can use your own extractors if you would like.  They need to
+implement the following methods:</p>
+
+<ul>
+<li>
+<code>#name</code> - returns extractor's name</li>
+<li>
+<code>#record_count</code> - returns count of records in source</li>
+<li>
+<code>#extract</code> - must yield each record and record index</li>
+</ul><div class="highlight">
+<pre><span class="k">class</span> <span class="nc">ArrayExtractor</span>
+  <span class="kp">attr_reader</span> <span class="ss">:name</span>
+
+  <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+    <span class="vi">@source</span> <span class="o">=</span> <span class="n">source</span>
+    <span class="vi">@name</span> <span class="o">=</span> <span class="s1">'array'</span>
+  <span class="k">end</span>
+
+  <span class="k">def</span> <span class="nf">extract</span>
+    <span class="n">index</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="vi">@source</span><span class="o">.</span><span class="n">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">record</span><span class="o">|</span>
+      <span class="k">yield</span> <span class="o">[</span><span class="n">record</span><span class="p">,</span> <span class="n">index</span><span class="o">]</span>
+      <span class="n">index</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="k">end</span>
+  <span class="k">end</span>
+
+  <span class="k">def</span> <span class="nf">record_count</span>
+    <span class="vi">@source</span><span class="o">.</span><span class="n">size</span>
+  <span class="k">end</span>
+<span class="k">end</span>
+
+<span class="n">source</span> <span class="o">=</span> <span class="o">[]</span>
+
+<span class="n">m</span> <span class="o">=</span> <span class="no">Drudgery</span><span class="o">::</span><span class="no">Manager</span><span class="o">.</span><span class="n">new</span>
+
+<span class="n">m</span><span class="o">.</span><span class="n">prepare</span> <span class="k">do</span> <span class="o">|</span><span class="n">job</span><span class="o">|</span>
+  <span class="n">m</span><span class="o">.</span><span class="n">extract</span> <span class="no">ArrayExtractor</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+  <span class="n">m</span><span class="o">.</span><span class="n">load</span> <span class="ss">:csv</span><span class="p">,</span> <span class="s1">'destination.csv'</span>
+<span class="k">end</span>
+</pre>
+</div>
+
+
+<p>Or, if you define your custom extractor under the Drudgery::Extractors
+namespace:</p>
+
+<div class="highlight">
+<pre><span class="k">module</span> <span class="nn">Drudgery</span>
+  <span class="k">module</span> <span class="nn">Extractors</span>
+    <span class="k">class</span> <span class="nc">ArrayExtractor</span>
+      <span class="kp">attr_reader</span> <span class="ss">:name</span>
+
+      <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+        <span class="vi">@source</span> <span class="o">=</span> <span class="n">source</span>
+        <span class="vi">@name</span> <span class="o">=</span> <span class="s1">'array'</span>
+      <span class="k">end</span>
+
+      <span class="k">def</span> <span class="nf">extract</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="vi">@source</span><span class="o">.</span><span class="n">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">record</span><span class="o">|</span>
+          <span class="k">yield</span> <span class="o">[</span><span class="n">record</span><span class="p">,</span> <span class="n">index</span><span class="o">]</span>
+          <span class="n">index</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">end</span>
+      <span class="k">end</span>
+
+      <span class="k">def</span> <span class="nf">record_count</span>
+        <span class="vi">@source</span><span class="o">.</span><span class="n">size</span>
+      <span class="k">end</span>
+    <span class="k">end</span>
+  <span class="k">end</span>
+<span class="k">end</span>
+
+<span class="n">source</span> <span class="o">=</span> <span class="o">[]</span>
+
+<span class="n">m</span> <span class="o">=</span> <span class="no">Drudgery</span><span class="o">::</span><span class="no">Manager</span><span class="o">.</span><span class="n">new</span>
+
+<span class="n">m</span><span class="o">.</span><span class="n">prepare</span> <span class="k">do</span> <span class="o">|</span><span class="n">job</span><span class="o">|</span>
+  <span class="n">m</span><span class="o">.</span><span class="n">extract</span> <span class="ss">:array</span><span class="p">,</span> <span class="n">source</span>
+  <span class="n">m</span><span class="o">.</span><span class="n">load</span> <span class="ss">:csv</span><span class="p">,</span> <span class="s1">'destination.csv'</span>
+<span class="k">end</span>
+</pre>
+</div>
+
+
+<h2>Transformers</h2>
+
+<p>Drudgery comes with a basic Transformer class.  It symbolizes the keys of
+each record and allows you to register a processor to process data.  The
+processor should implement a <code>#call</code> method and return a <code>Hash</code> or <code>nil</code>.</p>
+
+<div class="highlight">
+<pre><span class="n">custom_processor</span> <span class="o">=</span> <span class="no">Proc</span><span class="o">.</span><span class="n">new</span> <span class="k">do</span> <span class="o">|</span><span class="n">data</span><span class="p">,</span> <span class="n">cache</span><span class="o">|</span>
+  <span class="n">data</span><span class="o">[</span><span class="ss">:initials</span><span class="o">]</span> <span class="o">=</span> <span class="n">data</span><span class="o">[</span><span class="ss">:name</span><span class="o">].</span><span class="n">split</span><span class="p">(</span><span class="s1">' '</span><span class="p">)</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="o">&amp;</span><span class="ss">:capitalize</span><span class="p">)</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+  <span class="n">data</span>
+<span class="k">end</span>
+
+<span class="n">transformer</span> <span class="o">=</span> <span class="no">Drudgery</span><span class="o">::</span><span class="no">Transformer</span><span class="o">.</span><span class="n">new</span>
+<span class="n">transformer</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">custom_processor</span><span class="p">)</span>
+
+<span class="n">transformer</span><span class="o">.</span><span class="n">transform</span><span class="p">({</span> <span class="ss">:name</span> <span class="o">=&gt;</span> <span class="s1">'John Doe'</span> <span class="p">})</span> <span class="c1"># == { :name =&gt; 'John Doe', :initials =&gt; 'JD' }</span>
+</pre>
+</div>
+
+
+<p>You could also implement your own transformer if you need more custom
+processing power.  If you inherit from <code>Drudgery::Transfomer</code>, you need
+only implement the <code>#transform</code> method that accepts a hash argument as an
+argument and returns a <code>Hash</code> or <code>nil</code>.</p>
+
+<div class="highlight">
+<pre><span class="k">class</span> <span class="nc">CustomTransformer</span> <span class="o">&lt;</span> <span class="no">Drudgery</span><span class="o">::</span><span class="no">Transformer</span>
+  <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+    <span class="c1"># do custom processing here</span>
+  <span class="k">end</span>
+<span class="k">end</span>
+
+<span class="n">m</span> <span class="o">=</span> <span class="no">Drudgery</span><span class="o">::</span><span class="no">Manager</span><span class="o">.</span><span class="n">new</span>
+
+<span class="n">m</span><span class="o">.</span><span class="n">prepare</span> <span class="k">do</span> <span class="o">|</span><span class="n">job</span><span class="o">|</span>
+  <span class="n">m</span><span class="o">.</span><span class="n">extract</span> <span class="ss">:csv</span><span class="p">,</span> <span class="s1">'source.csv'</span>
+  <span class="n">m</span><span class="o">.</span><span class="n">transform</span> <span class="no">CustomTransformer</span><span class="o">.</span><span class="n">new</span>
+  <span class="n">m</span><span class="o">.</span><span class="n">load</span> <span class="ss">:csv</span><span class="p">,</span> <span class="s1">'destination.csv'</span>
+<span class="k">end</span>
+</pre>
+</div>
+
+
+<h2>Loaders</h2>
+
+<p>The following loaders are provided:</p>
+
+<ul>
+<li><code>:csv</code></li>
+<li><code>:sqlite3</code></li>
+<li><code>:active_record</code></li>
+<li><code>:active_record_import</code></li>
+</ul><p>You can use your own loaders if you would like.  They need to implement
+the following methods:</p>
+
+<ul>
+<li>
+<code>#name</code> - returns the loader's name</li>
+<li>
+<code>#load</code> - accepts an array of records and then write them to the
+destination</li>
+</ul><div class="highlight">
+<pre><span class="k">class</span> <span class="nc">ArrayLoader</span>
+  <span class="kp">attr_reader</span> <span class="ss">:name</span>
+
+  <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="n">destination</span><span class="p">)</span>
+    <span class="vi">@destination</span> <span class="o">=</span> <span class="n">destination</span>
+    <span class="vi">@name</span> <span class="o">=</span> <span class="s1">'array'</span>
+  <span class="k">end</span>
+
+  <span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="n">records</span><span class="p">)</span>
+    <span class="vi">@destination</span><span class="o">.</span><span class="n">push</span><span class="p">(</span><span class="o">*</span><span class="n">records</span><span class="p">)</span>
+  <span class="k">end</span>
+<span class="k">end</span>
+
+<span class="n">destination</span> <span class="o">=</span> <span class="o">[]</span>
+
+<span class="n">m</span> <span class="o">=</span> <span class="no">Drudgery</span><span class="o">::</span><span class="no">Manager</span><span class="o">.</span><span class="n">new</span>
+
+<span class="n">m</span><span class="o">.</span><span class="n">prepare</span> <span class="k">do</span> <span class="o">|</span><span class="n">job</span><span class="o">|</span>
+  <span class="n">m</span><span class="o">.</span><span class="n">extract</span> <span class="ss">:csv</span><span class="p">,</span> <span class="s1">'source.csv'</span>
+  <span class="n">m</span><span class="o">.</span><span class="n">load</span> <span class="no">ArrayLoader</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="n">destination</span><span class="p">)</span>
+<span class="k">end</span>
+</pre>
+</div>
+
+
+<p>Or, if you define your custom loader under the Drudgery::Loaders
+namespace:</p>
+
+<div class="highlight">
+<pre><span class="k">module</span> <span class="nn">Drudgery</span>
+  <span class="k">module</span> <span class="nn">Loaders</span>
+    <span class="k">class</span> <span class="nc">ArrayLoader</span>
+      <span class="kp">attr_reader</span> <span class="ss">:name</span>
+
+      <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="n">destination</span><span class="p">)</span>
+        <span class="vi">@destination</span> <span class="o">=</span> <span class="n">destination</span>
+        <span class="vi">@name</span> <span class="o">=</span> <span class="s1">'array'</span>
+      <span class="k">end</span>
+
+      <span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="n">records</span><span class="p">)</span>
+        <span class="vi">@destination</span><span class="o">.</span><span class="n">push</span><span class="p">(</span><span class="o">*</span><span class="n">records</span><span class="p">)</span>
+      <span class="k">end</span>
+    <span class="k">end</span>
+  <span class="k">end</span>
+<span class="k">end</span>
+
+<span class="n">destination</span> <span class="o">=</span> <span class="o">[]</span>
+
+<span class="n">m</span> <span class="o">=</span> <span class="no">Drudgery</span><span class="o">::</span><span class="no">Manager</span><span class="o">.</span><span class="n">new</span>
+
+<span class="n">m</span><span class="o">.</span><span class="n">prepare</span> <span class="k">do</span> <span class="o">|</span><span class="n">job</span><span class="o">|</span>
+  <span class="n">m</span><span class="o">.</span><span class="n">extract</span> <span class="ss">:csv</span><span class="p">,</span> <span class="s1">'source.csv'</span>
+  <span class="n">m</span><span class="o">.</span><span class="n">load</span> <span class="ss">:array</span><span class="p">,</span> <span class="n">destination</span>
+<span class="k">end</span>
+</pre>
+</div>
+
+      </section>
+
+    </div>
+    <!--[if !IE]><script>fixScale(document);</script><!--<![endif]-->
+  </body>
+</html>
