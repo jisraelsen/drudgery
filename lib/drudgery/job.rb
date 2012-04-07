@@ -91,6 +91,7 @@ module Drudgery
     end
 
     def load_records
+      return if @records.empty?
       log :debug, "Loading Records -- Count: #{@records.size}"
       log :debug, @records.inspect
 

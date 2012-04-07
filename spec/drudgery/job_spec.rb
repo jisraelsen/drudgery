@@ -291,6 +291,39 @@ describe Drudgery::Job do
       job.perform
     end
 
+    it 'skips nil records' do
+      Drudgery.show_progress = false
+      stub_logging
+
+      extractor = stub('extractor', :record_count => 1, :name => 'extractor')
+      extractor.stubs(:extract).yields([{ 'a' => 1 }, 0])
+
+      transformer = mock('transformer')
+      transformer.expects(:transform).with({ 'a' => 1 }).returns(nil)
+
+      loader = stub('loader', :name => 'loader')
+      loader.expects(:load).with([{ '1' => 1 }]).never
+
+      job = Drudgery::Job.new(:extractor => extractor, :transformer => transformer, :loader => loader)
+
+      job.perform
+    end
+
+    it 'does not load empty records' do
+      Drudgery.show_progress = false
+      stub_logging
+
+      extractor = stub('extractor', :record_count => 1, :name => 'extractor')
+      extractor.stubs(:extract)
+
+      loader = stub('loader', :name => 'loader')
+      loader.expects(:load).with([]).never
+
+      job = Drudgery::Job.new(:extractor => extractor, :loader => loader)
+
+      job.perform
+    end
+
     it 'loads records with loader in batches' do
       Drudgery.show_progress = false
       stub_logging
