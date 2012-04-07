@@ -255,7 +255,7 @@ m = Drudgery::Manager.new
 
 m.prepare do |job|
   m.extract :csv, 'source.csv'
-  m.transform( CustomTransformer.new)
+  m.transform CustomTransformer.new
   m.load :csv, 'destination.csv'
 end
 ```
