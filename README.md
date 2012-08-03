@@ -111,31 +111,12 @@ m.run
 Logging
 -------
 
-Provide Drudgery with a logger and info will be logged about each job.
-
-When log level is `INFO` expect to see basic output for each job (e.g.
-when it starts and completes).
-
-```ruby
-logger = Logger.new('log/etl.log')
-logger.level = Logger::INFO # Logger defaults to log level DEBUG
-
-Drudgery.logger = logger
-```
-
-When log level is `DEBUG` expect to see output for each record
-extracted, transformed and loaded (VERY NOISY).
+TODO
 
 Progress
 --------
 
-Drudgery also provides progress output to STDERR courtesty of the
-`progressbar` gem.  Progress output is on by default, but can be
-disabled with the following:
-
-```ruby
-Drudgery.show_progress = false
-```
+TODO
 
 Extractors
 ----------

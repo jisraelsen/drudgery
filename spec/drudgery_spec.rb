@@ -1,74 +1,48 @@
 require 'spec_helper'
 
-describe Drudgery do
-  describe '.log' do
-    after(:each) do
-      Drudgery.logger = nil
-    end
+module Drudgery
+  describe Extractors do
+    describe '.instantiate' do
+      it 'initializes extractor of type with args' do
+        Extractors::CSVExtractor.expects(:new).with('file.csv', :col_sep => '|')
+        Extractors.instantiate(:csv, 'file.csv', :col_sep => '|')
 
-    describe 'if logger defined' do
-      it 'sends mode and message to logger' do
-        logger = mock('logger')
-        logger.expects(:send).with(:debug, "Some message")
-        Drudgery.logger = logger
+        Extractors::SQLite3Extractor.expects(:new).with('db.sqlite3', 'tablename')
+        Extractors.instantiate(:sqlite3, 'db.sqlite3', 'tablename')
 
-        Drudgery.log :debug, "Some message"
+        model = stub('model')
+        Extractors::ActiveRecordExtractor.expects(:new).with(model)
+        Extractors.instantiate(:active_record, model)
       end
-    end
 
-    describe 'if no logger defined' do
-      it 'ignores mode and message' do
-        logger = mock('logger')
-        logger.expects(:send).never
-        Drudgery.logger = nil
-
-        Drudgery.log :debug, "Some message"
+      it 'returns an extractor' do
+        extractor = Extractors.instantiate(:csv, 'file.csv')
+        extractor.must_be_kind_of Extractors::CSVExtractor
       end
     end
   end
-end
 
-describe Drudgery::Extractors do
-  describe '.instantiate' do
-    it 'initializes extractor of type with args' do
-      Drudgery::Extractors::CSVExtractor.expects(:new).with('file.csv', :col_sep => '|')
-      Drudgery::Extractors.instantiate(:csv, 'file.csv', :col_sep => '|')
+  describe Loaders do
+    describe '.instantiate' do
+      it 'initializes loader of type with args' do
+        Loaders::CSVLoader.expects(:new).with('file.csv', :col_sep => '|')
+        Loaders.instantiate(:csv, 'file.csv', :col_sep => '|')
 
-      Drudgery::Extractors::SQLite3Extractor.expects(:new).with('db.sqlite3', 'tablename')
-      Drudgery::Extractors.instantiate(:sqlite3, 'db.sqlite3', 'tablename')
+        Loaders::SQLite3Loader.expects(:new).with('db.sqlite3', 'tablename')
+        Loaders.instantiate(:sqlite3, 'db.sqlite3', 'tablename')
 
-      model = stub('model')
-      Drudgery::Extractors::ActiveRecordExtractor.expects(:new).with(model)
-      Drudgery::Extractors.instantiate(:active_record, model)
-    end
+        model = stub('model')
+        Loaders::ActiveRecordLoader.expects(:new).with(model)
+        Loaders.instantiate(:active_record, model)
 
-    it 'returns an extractor' do
-      extractor = Drudgery::Extractors.instantiate(:csv, 'file.csv')
-      extractor.must_be_kind_of Drudgery::Extractors::CSVExtractor
-    end
-  end
-end
+        Loaders::ActiveRecordImportLoader.expects(:new).with(model)
+        Loaders.instantiate(:active_record_import, model)
+      end
 
-describe Drudgery::Loaders do
-  describe '.instantiate' do
-    it 'initializes loader of type with args' do
-      Drudgery::Loaders::CSVLoader.expects(:new).with('file.csv', :col_sep => '|')
-      Drudgery::Loaders.instantiate(:csv, 'file.csv', :col_sep => '|')
-
-      Drudgery::Loaders::SQLite3Loader.expects(:new).with('db.sqlite3', 'tablename')
-      Drudgery::Loaders.instantiate(:sqlite3, 'db.sqlite3', 'tablename')
-
-      model = stub('model')
-      Drudgery::Loaders::ActiveRecordLoader.expects(:new).with(model)
-      Drudgery::Loaders.instantiate(:active_record, model)
-
-      Drudgery::Loaders::ActiveRecordImportLoader.expects(:new).with(model)
-      Drudgery::Loaders.instantiate(:active_record_import, model)
-    end
-
-    it 'returns an loader' do
-      loader = Drudgery::Loaders.instantiate(:csv, 'file.csv')
-      loader.must_be_kind_of Drudgery::Loaders::CSVLoader
+      it 'returns an loader' do
+        loader = Loaders.instantiate(:csv, 'file.csv')
+        loader.must_be_kind_of Loaders::CSVLoader
+      end
     end
   end
 end

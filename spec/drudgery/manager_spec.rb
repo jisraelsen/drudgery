@@ -1,35 +1,37 @@
 require 'spec_helper'
 
-describe Drudgery::Manager do
-  before(:each) do
-    @manager = Drudgery::Manager.new
-  end
+module Drudgery
+  describe Manager do
+    let(:manager) { Manager.new }
 
-  describe '#initialize' do
-    it 'initializes jobs array' do
-      @manager.instance_variable_get('@jobs').must_equal []
+    describe '#prepare' do
+      it 'accepts job as an argument' do
+        job = Job.new
+
+        manager.prepare(job)
+      end
+
+      it 'allows configuration of job via block' do
+        manager.prepare do |job|
+          job.extract :csv, 'records.csv'
+        end
+      end
     end
-  end
 
-  describe '#prepare' do
-    it 'adds obj to jobs array' do
-      job = stub('job')
+    describe '#run' do
+      it 'performs each prepared job' do
+        job1 = Job.new
+        job2 = Job.new
+        job3 = Job.new
 
-      @manager.prepare(job)
-      @manager.instance_variable_get('@jobs').must_include job
-    end
-  end
+        job1.expects(:perform)
+        job2.expects(:perform)
+        job3.expects(:perform).never
 
-  describe '#run' do
-    it 'performs each job' do
-      job1 = mock('job1', :perform => nil)
-      job2 = mock('job2', :perform => nil)
-      job3 = mock('job3')
-      job3.expects(:perform).never
-
-      @manager.prepare(job1)
-      @manager.prepare(job2)
-      @manager.run
+        manager.prepare(job1)
+        manager.prepare(job2)
+        manager.run
+      end
     end
   end
 end

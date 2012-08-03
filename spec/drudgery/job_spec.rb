@@ -1,413 +1,288 @@
 require 'spec_helper'
 
-describe Drudgery::Job do
-  describe '#initialize' do
-    before(:each) do
-      @extractor = stub('extractor')
-      @transformer = stub('transformer')
-      @loader = stub('loader')
+module Drudgery
+  describe Job do
+    describe '#initialize' do
+      it 'sets job id to nsec time' do
+        now = Time.now
+        Time.stubs(:now).returns(now)
 
-      @now = Time.now
-      Time.stubs(:now).returns(@now)
-
-      @job = Drudgery::Job.new(:extractor => @extractor, :transformer => @transformer, :loader => @loader)
-    end
-
-    it 'sets job id to nsec time' do
-      @job.id.must_equal @now.nsec
-    end
-
-    it 'sets extractor, transformer, and loader with provided arguments' do
-      @job.instance_variable_get('@extractor').must_equal @extractor
-      @job.instance_variable_get('@transformer').must_equal @transformer
-      @job.instance_variable_get('@loader').must_equal @loader
-    end
-
-    it 'sets batch_size with provided argument' do
-      job = Drudgery::Job.new(:batch_size => 100)
-      job.instance_variable_get('@batch_size').must_equal(100)
-    end
-
-    it 'initializes extractor, transformer, and loader if none provided' do
-      job = Drudgery::Job.new
-      job.instance_variable_get('@extractor').must_be_nil
-      job.instance_variable_get('@transformer').must_be_nil
-      job.instance_variable_get('@loader').must_be_nil
-    end
-
-    it 'initializes records as array' do
-      @job.instance_variable_get('@records').must_equal []
-    end
-
-
-    it 'initializes batch_size as 1000 if none provided' do
-      @job.instance_variable_get('@batch_size').must_equal 1000
-    end
-  end
-
-  describe '#name' do
-    it 'returns <extractor name> => <loader name>' do
-      extractor = stub('extractor', :name => 'csv:file.csv')
-      loader = stub('loader', :name => 'sqlite3:memory.tablename')
-
-      job = Drudgery::Job.new(:extractor => extractor, :loader => loader)
-      job.name.must_equal 'csv:file.csv => sqlite3:memory.tablename'
-    end
-  end
-
-  describe '#batch_size' do
-    it 'sets batch_size to provided value' do
-      job = Drudgery::Job.new
-      job.batch_size 2
-      job.instance_variable_get('@batch_size').must_equal 2
-    end
-  end
-
-  describe '#extract' do
-    describe 'when type and args provided' do
-      it 'instantiates extractor with type and args' do
-        Drudgery::Extractors.expects(:instantiate).with(:csv, 'filename.csv', :col_sep => '|')
-
-        job = Drudgery::Job.new
-        job.extract(:csv, 'filename.csv', :col_sep => '|')
+        job = Job.new
+        job.id.must_equal now.nsec
       end
 
-      it 'yields extractor if block_given' do
-        extractor = mock('extractor')
-        extractor.expects(:col_sep).with('|')
+      it 'sets extractor, transformer, and loader with provided arguments' do
+        extractor = Extractors::CSVExtractor.new('test.csv')
+        transformer = Transformer.new
+        loader = Loaders::CSVLoader.new('test.csv')
 
-        Drudgery::Extractors.stubs(:instantiate).returns(extractor)
+        job = Job.new(
+          extractor:    extractor,
+          transformer:  transformer,
+          loader:       loader
+        )
 
-        job = Drudgery::Job.new
-        job.extract(:csv, 'filename.csv') do |extractor|
-          extractor.col_sep '|'
+        job.extractor.must_equal extractor
+        job.transformer.must_equal transformer
+        job.loader.must_equal loader
+      end
+
+      it 'sets batch_size with provided argument' do
+        job = Job.new(:batch_size => 100)
+        job.batch_size.must_equal 100
+      end
+
+      it 'initializes batch_size as 1000 if none provided' do
+        job = Job.new
+        job.batch_size.must_equal 1000
+      end
+    end
+
+    describe '#name' do
+      it 'returns <extractor name> => <loader name>' do
+        job = Job.new(
+          :extractor => Extractors::CSVExtractor.new('their-records.csv'),
+          :loader => Loaders::CSVLoader.new('my-records.csv')
+        )
+
+        job.name.must_equal 'csv:their-records.csv => csv:my-records.csv'
+      end
+    end
+
+    describe '#extract' do
+      describe 'when type and args provided' do
+        it 'instantiates extractor with type and args' do
+          job = Job.new
+          job.extract(:csv, 'test.csv', :col_sep => '|')
+
+          job.extractor.name.must_equal 'csv:test.csv'
+          job.extractor.col_sep.must_equal '|'
+        end
+
+        it 'yields extractor if block_given' do
+          job = Job.new
+          job.extract(:csv, 'test.csv') do |extractor|
+            extractor.col_sep = '|'
+          end
+
+          job.extractor.name.must_equal 'csv:test.csv'
+          job.extractor.col_sep.must_equal '|'
+        end
+
+        it 'sets extractor' do
+          job = Job.new
+          job.extract(:csv, 'test.csv', :col_sep => '|')
+
+          job.extractor.wont_be_nil
+          job.extractor.name.must_equal 'csv:test.csv'
+          job.extractor.col_sep.must_equal '|'
         end
       end
 
-      it 'sets extractor' do
-        extractor = stub('extractor')
+      describe 'when extractor provided' do
+        it 'yields extractor if block_given' do
+          extractor = Extractors::CSVExtractor.new('test.csv')
 
-        Drudgery::Extractors.stubs(:instantiate).returns(extractor)
+          job = Job.new
+          job.extract(extractor) do |ext|
+            ext.col_sep = '|'
+          end
 
-        job = Drudgery::Job.new
-        job.extract(:csv, 'filename.csv', :col_sep => '|')
+          extractor.name.must_equal 'csv:test.csv'
+          extractor.col_sep.must_equal '|'
+        end
 
-        job.instance_variable_get('@extractor').must_equal extractor
+        it 'sets extractor' do
+          extractor = Extractors::CSVExtractor.new('test.csv')
+
+          job = Job.new
+          job.extract(extractor)
+          job.extractor.must_equal extractor
+        end
       end
     end
 
-    describe 'when extractor provided' do
-      it 'does not instantiat extractor with type and args' do
-        extractor = stub('extractor')
+    describe '#transform' do
+      describe 'when transformer provided' do
+        it 'registers provided proc with provided transformer' do
+          block = Proc.new { |data, cache| data[:a] += 1; data }
 
-        Drudgery::Extractors.expects(:instantiate).never
+          transformer = Transformer.new
 
-        job = Drudgery::Job.new
-        job.extract(extractor)
-      end
+          job = Job.new
+          job.transform(transformer, &block)
 
-      it 'yields extractor if block_given' do
-        extractor = mock('extractor')
-        extractor.expects(:col_sep).with('|')
+          transformer.transform('a' => 1).must_equal({ :a => 2 })
+        end
 
-        job = Drudgery::Job.new
-        job.extract(extractor) do |ext|
-          ext.col_sep '|'
+        it 'registers provided block with provided transformer' do
+          transformer = Transformer.new
+
+          job = Job.new
+          job.transform(transformer) { |data, cache| data[:a] += 2; data }
+
+          transformer.transform('a' => 1).must_equal({ :a => 3 })
+        end
+
+        it 'sets transformer' do
+          transformer = Transformer.new
+
+          job = Job.new
+          job.transform(transformer)
+
+          transformer.must_equal transformer
         end
       end
 
-      it 'sets extractor' do
-        extractor = stub('extractor')
+      describe 'when no transformer provided' do
+        it 'registers provided proc with default transformer' do
+          block = Proc.new { |data, cache| data[:a] += 1; data }
 
-        job = Drudgery::Job.new
-        job.extract(extractor)
+          job = Job.new
+          job.transform(&block)
+          job.transformer.transform('a' => 1).must_equal({ :a => 2 })
+        end
 
-        job.instance_variable_get('@extractor').must_equal extractor
-      end
-    end
-  end
+        it 'registers provided block with default transformer' do
+          job = Job.new
+          job.transform { |data, cache| data[:a] += 2; data }
+          job.transformer.transform('a' => 1).must_equal({ :a => 3 })
+        end
 
-  describe '#transform' do
-    describe 'when transformer provided' do
-      it 'sets transformer to provided transformer' do
-        transformer = stub('transformer', :register => nil)
 
-        job = Drudgery::Job.new
-        job.transform(transformer)
-
-        job.instance_variable_get('@transformer').must_equal transformer
-      end
-
-      it 'registers provided proc with provided transformer' do
-        block = Proc.new { |data, cache| data }
-
-        transformer = mock('transformer')
-        transformer.expects(:register).with(block)
-
-        job = Drudgery::Job.new
-        job.transform(transformer, &block)
-      end
-
-      it 'registers provided block with provided transformer' do
-        transformer = mock('transformer')
-        transformer.expects(:register).with { |data, cache| data }
-
-        job = Drudgery::Job.new
-        job.transform(transformer) { |data, cache| data }
+        it 'sets transformer to default transformer' do
+          job = Job.new
+          job.transform
+          job.transformer.must_be_instance_of Transformer
+        end
       end
     end
 
-    describe 'when no transformer provided' do
-      it 'sets transformer to default transformer' do
-        transformer = stub('transformer', :register => nil)
+    describe '#load' do
+      describe 'when type and args provided' do
+        it 'instantiates loader with type with args' do
+          job = Job.new
+          job.load(:csv, 'test.csv', :col_sep => '|')
 
-        Drudgery::Transformer.expects(:new).returns(transformer)
+          job.loader.name.must_equal 'csv:test.csv'
+          job.loader.col_sep.must_equal '|'
+        end
 
-        job = Drudgery::Job.new
-        job.transform
+        it 'yields loader if block_given' do
+          job = Job.new
+          job.load(:csv, 'test.csv') do |loader|
+            loader.col_sep = '|'
+          end
 
-        job.instance_variable_get('@transformer').must_equal transformer
-      end
+          job.loader.name.must_equal 'csv:test.csv'
+          job.loader.col_sep.must_equal '|'
+        end
 
-      it 'registers provided proc with default transformer' do
-        block = Proc.new { |data, cache| data }
+        it 'sets loader' do
+          job = Job.new
+          job.load(:csv, 'test.csv', :col_sep => '|')
 
-        transformer = mock('transformer')
-        transformer.expects(:register).with(block)
-
-        Drudgery::Transformer.stubs(:new).returns(transformer)
-
-        job = Drudgery::Job.new
-        job.transform(&block)
-      end
-
-      it 'registers provided block with default transformer' do
-        transformer = Drudgery::Transformer.new
-        transformer.expects(:register).with { |data, cache| data }
-
-        Drudgery::Transformer.stubs(:new).returns(transformer)
-
-        job = Drudgery::Job.new
-        job.transform { |data, cache| data }
-      end
-    end
-  end
-
-  describe '#load' do
-    describe 'when type and args provided' do
-      it 'instantiates loader with type with args' do
-        Drudgery::Loaders.expects(:instantiate).with(:sqlite3, 'db.sqlite3', 'tablename')
-
-        job = Drudgery::Job.new
-        job.load(:sqlite3, 'db.sqlite3', 'tablename')
-      end
-
-      it 'yields loader if block_given' do
-        loader = mock('loader')
-        loader.expects(:select).with('a', 'b', 'c')
-
-        Drudgery::Loaders.stubs(:instantiate).with(:sqlite3, 'db.sqlite3', 'tablename').returns(loader)
-
-        job = Drudgery::Job.new
-        job.load(:sqlite3, 'db.sqlite3', 'tablename') do |loader|
-          loader.select('a', 'b', 'c')
+          job.loader.wont_be_nil
+          job.loader.name.must_equal 'csv:test.csv'
+          job.loader.col_sep.must_equal '|'
         end
       end
 
-      it 'sets loader' do
-        loader = stub('loader')
+      describe 'when loader provided' do
+        it 'yields loader if block_given' do
+          loader = Loaders::CSVLoader.new('test.csv')
 
-        Drudgery::Loaders.expects(:instantiate).with(:sqlite3, 'db.sqlite3', 'tablename').returns(loader)
+          job = Job.new
+          job.load(loader) do |loader|
+            loader.col_sep = '|'
+          end
 
-        job = Drudgery::Job.new
-        job.load(:sqlite3, 'db.sqlite3', 'tablename')
-        job.instance_variable_get('@loader').must_equal loader
-      end
-    end
+          loader.name.must_equal 'csv:test.csv'
+          loader.col_sep.must_equal '|'
+        end
 
-    describe 'when loader provided' do
-      it 'does not instantiate loader with type with args' do
-        loader = stub('loader')
+        it 'sets loader' do
+          loader = Loaders::CSVLoader.new('test.csv')
 
-        Drudgery::Loaders.expects(:instantiate).never
-
-        job = Drudgery::Job.new
-        job.load(loader)
-      end
-
-      it 'yields loader if block_given' do
-        loader = mock('loader')
-        loader.expects(:select).with('a', 'b', 'c')
-
-        job = Drudgery::Job.new
-        job.load(loader) do |loader|
-          loader.select('a', 'b', 'c')
+          job = Job.new
+          job.load(loader)
+          job.loader.must_equal loader
         end
       end
-
-      it 'sets loader' do
-        loader = stub('loader')
-
-        job = Drudgery::Job.new
-        job.load(loader)
-        job.instance_variable_get('@loader').must_equal loader
-      end
-    end
-  end
-
-  def mock_logger
-    stub('job_logger', :log => nil, :log_with_progress => nil)
-  end
-
-  def stub_logging
-    
-  end
-
-  describe '#perform' do
-    before(:each) do 
-      Drudgery.show_progress = false
-      Drudgery::JobLogger.stubs(:new).returns(mock_logger)
     end
 
-    it 'extracts records from extractor' do
-      extractor = stub('extractor', :record_count => 1, :name => 'extractor')
-      extractor.expects(:extract).yields([{ 'a' => 1 }, 0])
+    describe '#perform' do
+      before do
+        @source = 'tmp/source.csv'
+        @destination = 'tmp/destination.csv'
+        File.delete(@source) if File.exists?(@source)
+        File.delete(@destination) if File.exists?(@destination)
 
-      loader = stub('loader', :name => 'loader', :load => nil)
-
-      job = Drudgery::Job.new(:extractor => extractor, :loader => loader)
-
-      job.perform
-    end
-
-    it 'transforms records with transformer' do
-      extractor = stub('extractor', :record_count => 1, :name => 'extractor')
-      extractor.stubs(:extract).yields([{ 'a' => 1 }, 0])
-
-      transformer = mock('transformer')
-      transformer.expects(:transform).with({ 'a' => 1 }).returns({ :a => 1 })
-
-      loader = stub('loader', :name => 'loader', :load => nil)
-
-      job = Drudgery::Job.new(:extractor => extractor, :transformer => transformer, :loader => loader)
-
-      job.perform
-    end
-
-    it 'skips nil records' do
-      extractor = stub('extractor', :record_count => 1, :name => 'extractor')
-      extractor.stubs(:extract).yields([{ 'a' => 1 }, 0])
-
-      transformer = mock('transformer')
-      transformer.expects(:transform).with({ 'a' => 1 }).returns(nil)
-
-      loader = stub('loader', :name => 'loader')
-      loader.expects(:load).with([{ '1' => 1 }]).never
-
-      job = Drudgery::Job.new(:extractor => extractor, :transformer => transformer, :loader => loader)
-
-      job.perform
-    end
-
-    it 'does not load empty records' do
-      extractor = stub('extractor', :record_count => 1, :name => 'extractor')
-      extractor.stubs(:extract)
-
-      loader = stub('loader', :name => 'loader')
-      loader.expects(:load).with([]).never
-
-      job = Drudgery::Job.new(:extractor => extractor, :loader => loader)
-
-      job.perform
-    end
-
-    it 'loads records with loader in batches' do
-      extractor = stub('extractor', :record_count => 3, :name => 'extractor')
-      extractor.stubs(:extract).multiple_yields([{ 'a' => 1 }, 0], [{ 'b' => 2 }, 1], [{ 'c' => 3 }, 2])
-
-      loader = stub('loader', :name => 'loader')
-      loader.expects(:load).with([{ 'a' => 1 }, { 'b' => 2 }])
-      loader.expects(:load).with([{ 'c' => 3 }])
-
-      job = Drudgery::Job.new(:extractor => extractor, :loader => loader)
-      job.batch_size 2
-
-      job.perform
-    end
-
-    describe 'with progress on' do
-      it 'tracks progress information' do
-        Drudgery.show_progress = true
-
-        extractor = stub('extractor', :record_count => 3, :name => 'extractor')
-        extractor.stubs(:extract).multiple_yields([{ 'a' => 1 }, 0], [{ 'b' => 2 }, 1], [{ 'c' => 3 }, 2])
-
-        loader = stub('loader', :name => 'loader', :load => nil)
-
-        job = Drudgery::Job.new(:extractor => extractor, :loader => loader)
-
-        progress = mock('job_progress') do
-          expects(:inc).times(3)
-          expects(:finish)
+        File.open(@source, 'w') do |f|
+          f.puts 'a,b'
+          f.puts '1,2'
+          f.puts '3,4'
+          f.puts '5,6'
         end
-        Drudgery::JobProgress.stubs(:new).with(job.id, 3).returns(progress)
 
-        job.perform
+        @extractor = Extractors::CSVExtractor.new(@source)
+        @loader = Loaders::CSVLoader.new(@destination)
+
+        @job = Job.new(:extractor => @extractor, :loader => @loader, :transformer => @transformer)
       end
-    end
 
-    describe 'with progress off' do
-      it 'does not track progress information' do
-        extractor = stub('extractor', :record_count => 3, :name => 'extractor')
-        extractor.stubs(:extract).multiple_yields([{ 'a' => 1 }, 0], [{ 'b' => 2 }, 1], [{ 'c' => 3 }, 2])
-
-        loader = stub('loader', :name => 'loader', :load => nil)
-
-        job = Drudgery::Job.new(:extractor => extractor, :loader => loader)
-
-        Drudgery::JobProgress.expects(:new).never
-
-        job.perform
+      after do
+        File.delete(@source) if File.exists?(@source)
+        File.delete(@destination) if File.exists?(@destination)
       end
-    end
 
-    it 'logs job details' do
-      extractor = stub('extractor', :record_count => 3, :name => 'extractor')
-      extractor.stubs(:extract).multiple_yields([{ 'a' => 1 }, 0], [{ 'b' => 2 }, 1], [{ 'c' => 3 }, 2])
+      it 'extracts records from extractor and loads records with loader' do
+        @job.perform
 
-      loader = stub('loader', :name => 'loader', :load => nil)
+        records = File.readlines(@destination).map { |line| line.strip.split(',') }
+        records.must_equal [%w[a b], %w[1 2], %w[3 4], %w[5 6]]
+      end
 
-      job = Drudgery::Job.new(:extractor => extractor, :loader => loader)
-      job.batch_size 2
+      it 'transforms records with transformer' do
+        transformer = Transformer.new
+        transformer.register Proc.new { |data, cache| data[:c] = 99; data }
 
-      Benchmark.stubs(:realtime).returns(1.25333).yields
+        @job.transformer = transformer
+        @job.perform
 
-      logger = mock_logger
-      logger.expects(:log_with_progress).with(:info,  "extractor => loader")
+        records = File.readlines(@destination).map { |line| line.strip.split(',') }
+        records.must_equal [%w[a b c], %w[1 2 99], %w[3 4 99], %w[5 6 99]]
+      end
 
-      logger.expects(:log).with(:debug, "Extracting Record -- Index: 0")
-      logger.expects(:log).with(:debug, "#{{ 'a' => 1 }.inspect}")
-      logger.expects(:log).with(:debug, "Transforming Record -- Index: 0")
-      logger.expects(:log).with(:debug, "#{{ 'a' => 1 }.inspect}")
-      logger.expects(:log).with(:debug, "Extracting Record -- Index: 1")
-      logger.expects(:log).with(:debug, "#{{ 'b' => 2 }.inspect}")
-      logger.expects(:log).with(:debug, "Transforming Record -- Index: 1")
-      logger.expects(:log).with(:debug, "#{{ 'b' => 2 }.inspect}")
-      logger.expects(:log).with(:debug, "Loading Records -- Count: 2")
-      logger.expects(:log).with(:debug, "#{[{ 'a' => 1 }, { 'b' => 2 }].inspect}")
+      it 'skips nil records' do
+        transformer = Transformer.new
+        transformer.register Proc.new { |data, cache| data[:a] == '1' ? nil : data }
 
-      logger.expects(:log).with(:debug, "Extracting Record -- Index: 2")
-      logger.expects(:log).with(:debug, "#{{ 'c' => 3 }.inspect}")
-      logger.expects(:log).with(:debug, "Transforming Record -- Index: 2")
-      logger.expects(:log).with(:debug, "#{{ 'c' => 3 }.inspect}")
-      logger.expects(:log).with(:debug, "Loading Records -- Count: 1")
-      logger.expects(:log).with(:debug, "#{[{ 'c' => 3 }].inspect}")
+        @job.transformer = transformer
+        @job.perform
 
-      logger.expects(:log_with_progress).with(:info,  "Completed in 1.25s\n\n")
+        records = File.readlines(@destination).map { |line| line.strip.split(',') }
+        records.must_equal [%w[a b], %w[3 4], %w[5 6]]
+      end
 
-      Drudgery::JobLogger.stubs(:new).returns(logger)
+      it 'does not load empty records' do
+        transformer = Transformer.new
+        transformer.register Proc.new { |data, cache| nil}
 
-      job.perform
+        @loader.expects(:load).never
+
+        @job.transformer = transformer
+        @job.perform
+      end
+
+      it 'loads records with loader in batches' do
+        @job.batch_size = 2
+
+        @loader.expects(:load).with([{ 'a' => '1', 'b' => '2' }, { 'a' => '3', 'b' => '4' }])
+        @loader.expects(:load).with([{ 'a' => '5', 'b' => '6' }])
+
+        @job.perform
+      end
     end
   end
 end
