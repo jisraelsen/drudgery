@@ -30,7 +30,7 @@ module Drudgery
     end
 
     def transform(transformer=Drudgery::Transformer.new, &processor)
-      transformer.register(processor)
+      transformer.register(processor) if processor
 
       @transformer = transformer
     end
