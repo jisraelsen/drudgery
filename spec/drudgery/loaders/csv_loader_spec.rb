@@ -1,78 +1,67 @@
 require 'spec_helper'
 
-describe Drudgery::Loaders::CSVLoader do
-  describe '#initialize' do
-    it 'sets filepath to provided filepath' do
-      loader = Drudgery::Loaders::CSVLoader.new('file.csv')
-      loader.instance_variable_get('@filepath').must_equal 'file.csv'
-    end
+module Drudgery
+  module Loaders
+    describe CSVLoader do
+      describe '#name' do
+        it 'returns csv:<file base name>' do
+          loader = CSVLoader.new('tmp/people.csv')
+          loader.name.must_equal 'csv:people.csv'
+        end
+      end
 
-    it 'initializes write_headers boolean' do
-      loader = Drudgery::Loaders::CSVLoader.new('file.csv')
-      loader.instance_variable_get('@write_headers').must_equal true
-    end
+      describe '#col_sep' do
+        it 'returns col_sep option' do
+          loader = CSVLoader.new('tmp/people.csv', :col_sep => '|')
+          loader.col_sep.must_equal '|'
+        end
+      end
 
-    it 'sets options to provided options' do
-      options = { :col_sep => '|' }
+      describe '#col_sep=' do
+        it 'sets col_sep to provided character' do
+          loader = CSVLoader.new('tmp/people.csv')
+          loader.col_sep = '|'
+          loader.col_sep.must_equal '|'
+        end
+      end
 
-      loader = Drudgery::Loaders::CSVLoader.new('file.csv', options)
-      loader.instance_variable_get('@options').must_equal({ :col_sep => '|' })
-    end
+      describe '#load' do
+        before do
+          @file = 'tmp/test.csv'
+          File.delete(@file) if File.exists?(@file)
+        end
 
-    it 'sets name to csv:<file base name>' do
-      loader = Drudgery::Loaders::CSVLoader.new('tmp/file.csv')
-      loader.name.must_equal 'csv:file.csv'
-    end
-  end
+        after do
+          File.delete(@file) if File.exists?(@file)
+        end
 
-  describe '#load' do
-    it 'opens CSV file to append records' do
-      CSV.expects(:open).with('file.csv', 'a', :col_sep => '|')
+        describe 'when columns separated by |' do
+          it 'writes hash keys as header and records as rows' do
+            record1 = { :a => 1, :b => 2 }
+            record2 = { :a => 3, :b => 4 }
+            record3 = { :a => 5, :b => 6 }
 
-      loader = Drudgery::Loaders::CSVLoader.new('file.csv', :col_sep => '|')
-      loader.load([{}])
-    end
+            loader = CSVLoader.new(@file, :col_sep => '|')
+            loader.load([record1, record2])
+            loader.load([record3])
 
-    it 'writes hash keys as header and records as rows' do
-      record1 = { :a => 1, :b => 2 }
-      record2 = { :a => 3, :b => 4 }
-      record3 = { :a => 5, :b => 6 }
+            records = File.readlines(@file).map { |line| line.strip.split('|') }
+            records.must_equal [%w[a b], %w[1 2], %w[3 4], %w[5 6]]
+          end
+        end
 
-      csv = mock('csv')
-      csv.expects(:<<).with([:a, :b])
-      csv.expects(:<<).with([1, 2])
-      csv.expects(:<<).with([3, 4])
-      csv.expects(:<<).with([5, 6])
+        it 'writes hash keys as header and records as rows' do
+          record1 = { :a => 1, :b => 2 }
+          record2 = { :a => 3, :b => 4 }
+          record3 = { :a => 5, :b => 6 }
 
-      CSV.expects(:open).with('file.csv', 'a', {}).yields(csv).times(2)
+          loader = CSVLoader.new(@file)
+          loader.load([record1, record2])
+          loader.load([record3])
 
-      loader = Drudgery::Loaders::CSVLoader.new('file.csv')
-      loader.load([record1, record2])
-      loader.load([record3])
-    end
-  end
-
-  describe 'without stubs' do
-    before(:each) do
-      File.delete('file.csv') if File.exists?('file.csv')
-    end
-
-    after(:each) do
-      File.delete('file.csv') if File.exists?('file.csv')
-    end
-
-    describe '#load' do
-      it 'writes hash keys as header and records as rows' do
-        record1 = { :a => 1, :b => 2 }
-        record2 = { :a => 3, :b => 4 }
-        record3 = { :a => 5, :b => 6 }
-
-        loader = Drudgery::Loaders::CSVLoader.new('file.csv')
-        loader.load([record1, record2])
-        loader.load([record3])
-
-        records = File.readlines('file.csv').map { |line| line.strip.split(',') }
-        records.must_equal [%w[a b], %w[1 2], %w[3 4], %w[5 6]]
+          records = File.readlines(@file).map { |line| line.strip.split(',') }
+          records.must_equal [%w[a b], %w[1 2], %w[3 4], %w[5 6]]
+        end
       end
     end
   end

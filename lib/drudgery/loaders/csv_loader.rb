@@ -12,6 +12,14 @@ module Drudgery
         @name = "csv:#{File.basename(@filepath)}"
       end
 
+      def col_sep
+        @options[:col_sep]
+      end
+
+      def col_sep=(char)
+        @options[:col_sep] = char
+      end
+
       def load(records)
         columns = records.first.keys.sort { |a,b| a.to_s <=> b.to_s }
 

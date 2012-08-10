@@ -1,6 +1,7 @@
 module Drudgery
   class Job
-    attr_reader :id
+    attr_reader :id, :started_at, :completed_at
+    attr_accessor :extractor, :loader, :transformer, :batch_size
 
     def initialize(options={})
       @id           = Time.now.nsec
@@ -16,8 +17,10 @@ module Drudgery
       "#{@extractor.name} => #{@loader.name}"
     end
 
-    def batch_size(size)
-      @batch_size = size
+    def record_count
+      if @extractor
+        @record_count ||= @extractor.record_count
+      end
     end
 
     def extract(*args)
@@ -33,7 +36,7 @@ module Drudgery
     end
 
     def transform(transformer=Drudgery::Transformer.new, &processor)
-      transformer.register(processor)
+      transformer.register(processor) if processor
 
       @transformer = transformer
     end
@@ -51,36 +54,30 @@ module Drudgery
     end
 
     def perform
-      logger.log_with_progress :info, name
+      @started_at = Time.now
+      Drudgery.notify :before_job, self
 
-      elapsed = Benchmark.realtime do
-        extract_records do |record|
-          @records << record
+      extract_records do |record|
+        @records << record
 
-          if @records.size == @batch_size
-            load_records
-          end
-
-          progress.inc if Drudgery.show_progress
+        if @records.size == @batch_size
+          load_records
         end
-
-        load_records
-
-        progress.finish if Drudgery.show_progress
       end
 
-      logger.log_with_progress :info, "Completed in #{"%.2f" % elapsed}s\n\n"
+      load_records
+
+      @completed_at = Time.now
+      Drudgery.notify :after_job, self
     end
 
     private
     def extract_records
       @extractor.extract do |data, index|
-        logger.log :debug, "Extracting Record -- Index: #{index}"
-        logger.log :debug, data.inspect
+        Drudgery.notify :after_extract, self, data, index
 
         record = transform_data(data)
-        logger.log :debug, "Transforming Record -- Index: #{index}"
-        logger.log :debug, data.inspect
+        Drudgery.notify :after_transform, self, record, index
 
         if record.nil?
           next
@@ -91,10 +88,9 @@ module Drudgery
     end
 
     def load_records
-      logger.log :debug, "Loading Records -- Count: #{@records.size}"
-      logger.log :debug, @records.inspect
-
       @loader.load(@records) unless @records.empty?
+      Drudgery.notify :after_load, self, @records
+
       @records.clear
     end
 
@@ -104,14 +100,6 @@ module Drudgery
       else
         data
       end
-    end
-
-    def progress
-      @progress ||= Drudgery::JobProgress.new(id, @extractor.record_count)
-    end
-
-    def logger
-      @logger ||= Drudgery::JobLogger.new(id)
     end
   end
 end

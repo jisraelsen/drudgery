@@ -1,10 +1,6 @@
-require 'benchmark'
 require 'csv'
-require 'progressbar'
 
 require 'drudgery/version'
-require 'drudgery/job_progress'
-require 'drudgery/job_logger'
 require 'drudgery/manager'
 require 'drudgery/job'
 require 'drudgery/transformer'
@@ -20,10 +16,22 @@ require 'drudgery/loaders/sqlite3_loader'
 
 module Drudgery
   class << self
-    attr_accessor :logger, :show_progress
+    def listeners
+      @listeners ||= Hash.new { |hash, key| hash[key] = [] }
+    end
 
-    def log(mode, message)
-      logger.send(mode, message) if logger
+    def subscribe(event, &block)
+      listeners[event] << block
+    end
+
+    def unsubscribe(event)
+      listeners[event].clear
+    end
+
+    def notify(event, *args)
+      listeners[event].each do |listener|
+        listener.call(*args)
+      end
     end
   end
 
@@ -57,5 +65,3 @@ module Drudgery
     end
   end
 end
-
-Drudgery.show_progress = true

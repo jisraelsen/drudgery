@@ -8,8 +8,9 @@ end
 require 'minitest/spec'
 require 'minitest/autorun'
 require 'mocha'
-#require 'turn/autorun'
-
-#Turn.config.format = :dot
 
 require 'drudgery'
+
+require 'sqlite3'
+require 'active_record'
+require 'activerecord-import'

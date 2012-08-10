@@ -19,13 +19,10 @@ Gem::Specification.new do |s|
   s.test_files    = `git ls-files -- spec/*`.split("\n")
   s.require_path  = 'lib'
 
-  s.add_dependency 'progressbar', '~> 0.10'
-
   s.add_development_dependency 'rake'
   s.add_development_dependency 'bundler',             '~> 1.1'
-  s.add_development_dependency 'mocha',               '~> 0.10'
+  s.add_development_dependency 'mocha',               '~> 0.12'
   s.add_development_dependency 'simplecov',           '~> 0.6'
-  s.add_development_dependency 'turn',                '~> 0.9'
   s.add_development_dependency 'guard-minitest',      '~> 0.5'
   s.add_development_dependency 'activerecord',        '~> 3.0'
   s.add_development_dependency 'activerecord-import', '~> 0.2.9'

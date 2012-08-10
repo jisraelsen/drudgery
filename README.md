@@ -79,7 +79,7 @@ db = SQLite3::Database.new('db.sqlite3')
 m = Drudgery::Manager.new
 
 m.prepare do |job|
-  job.batch_size 5000
+  job.batch_size = 5000
 
   job.extract :sqlite3, db, 'addresses' do |extractor|
     extractor.select(
@@ -106,35 +106,6 @@ m.prepare do |job|
 end
 
 m.run
-```
-
-Logging
--------
-
-Provide Drudgery with a logger and info will be logged about each job.
-
-When log level is `INFO` expect to see basic output for each job (e.g.
-when it starts and completes).
-
-```ruby
-logger = Logger.new('log/etl.log')
-logger.level = Logger::INFO # Logger defaults to log level DEBUG
-
-Drudgery.logger = logger
-```
-
-When log level is `DEBUG` expect to see output for each record
-extracted, transformed and loaded (VERY NOISY).
-
-Progress
---------
-
-Drudgery also provides progress output to STDERR courtesty of the
-`progressbar` gem.  Progress output is on by default, but can be
-disabled with the following:
-
-```ruby
-Drudgery.show_progress = false
 ```
 
 Extractors
@@ -329,6 +300,84 @@ m = Drudgery::Manager.new
 m.prepare do |job|
   m.extract :csv, 'source.csv'
   m.load :array, destination
+end
+```
+
+Event Hooks
+-----------
+
+Drudgery provides hooks so that you can listen for events and execute
+your own code (e.g. logging and progress).
+
+The following events are provided:
+
+ * `:before_job` - Fired before the jobs starts.
+ * `:after_job` - Fired after the jobs completes.
+ * `:after_extract` - Fired after each record is extracted.
+ * `:after_transform` - Fired after each record is transformed.
+ * `:after_load` - Fired after each batch of records are loaded.
+
+Logging
+-------
+
+Support for logging is not provided explicitly.  Here is an example
+using the hooks provided:
+
+```ruby
+require 'logger'
+logger = Logger.new('drudgery.log')
+
+# before_job yields the job
+Drudgery.subscribe :before_job do |job|
+  logger.info "## JOB #{job.id}: #{job.name}"
+end
+
+# after_extract yields the job, record, and record index
+Drudgery.subscribe :after_extract do |job, record, index|
+  logger.debug "## JOB #{job.id}: Extracting Record -- Index: #{index}"
+  logger.debug "## JOB #{job.id}: #{record.inspect}"
+end
+
+# after_transform yields the job, record, and record index
+Drudgery.subscribe :after_transform do |job, record, index|
+  logger.debug "## JOB #{job.id}: Transforming Record -- Index: #{index}"
+  logger.debug "## JOB #{job.id}: #{record.inspect}"
+end
+
+# after_load yields the job and records that were loaded
+Drudgery.subscribe :after_load do |job, records|
+  logger.debug "## JOB #{job.id}: Loading Records -- Count: #{records.size}"
+  logger.debug "## JOB #{job.id}: #{records.inspect}"
+end
+
+# after_job yields the job
+Drudgery.subscribe :after_job do |job|
+  logger.info "## JOB #{job.id}: Completed at #{job.completed_at}"
+end
+```
+
+Progress
+--------
+
+Support for progress indication is not provided explicitly.  Here is an example
+using the hooks provided:
+
+```ruby
+require 'rubygems'
+require 'progressbar'
+
+progress = {}
+
+Drudgery.subscribe :before_job do |job|
+  progress[job.id] ||= ProgressBar.new("## JOB #{job.id}", job.record_count)
+end
+
+Drudgery.subscribe :after_extract do |job, record, index|
+  progress[job.id].inc
+end
+
+Drudgery.subscribe :after_job do |job|
+  progress[job.id].finish
 end
 ```
 

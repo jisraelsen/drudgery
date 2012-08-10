@@ -10,6 +10,14 @@ module Drudgery
         @name = "csv:#{File.basename(@filepath)}"
       end
 
+      def col_sep
+        @options[:col_sep]
+      end
+
+      def col_sep=(char)
+        @options[:col_sep] = char
+      end
+
       def extract
         index = 0
 
