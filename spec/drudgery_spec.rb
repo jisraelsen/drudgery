@@ -1,6 +1,61 @@
 require 'spec_helper'
 
 module Drudgery
+  describe Drudgery do
+    before do
+      Drudgery.listeners.clear
+    end
+
+    after do
+      Drudgery.listeners.clear
+    end
+
+    describe '.subscribe' do
+      it 'subscribes listener for event' do
+        block = proc { |job| 1 + 1 }
+        Drudgery.subscribe(:before_job, &block)
+
+        Drudgery.listeners[:before_job].must_equal [block]
+      end
+
+      it 'supports subscription of multiple listeners for a single event' do
+        block1 = proc { |job| 1 + 1 }
+        block2 = proc { |job| 2 + 2 }
+        Drudgery.subscribe(:before_job, &block1)
+        Drudgery.subscribe(:before_job, &block2)
+
+        Drudgery.listeners[:before_job].must_equal [block1, block2]
+      end
+    end
+
+    describe '.unsubscribe' do
+      before do
+        block1 = proc { |job| 1 + 1 }
+        block2 = proc { |job| 2 + 2 }
+        Drudgery.subscribe(:before_job, &block1)
+        Drudgery.subscribe(:before_job, &block2)
+      end
+
+      it 'unsubscribes all listeners for event' do
+        Drudgery.unsubscribe(:before_job)
+
+        Drudgery.listeners[:before_job].must_be_empty
+      end
+    end
+
+    describe '.notify' do
+      it 'notifies all listeners with given arguments for event' do
+        Drudgery.subscribe(:before_job) { |r| r[:x] = 1 + 1 }
+
+        result = {}
+
+        Drudgery.notify(:before_job, result)
+
+        result[:x].must_equal 2
+      end
+    end
+  end
+
   describe Extractors do
     describe '.instantiate' do
       it 'initializes extractor of type with args' do

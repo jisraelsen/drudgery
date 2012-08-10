@@ -236,6 +236,14 @@ module Drudgery
         File.delete(@destination) if File.exists?(@destination)
       end
 
+      it 'sets started_at and completed_at' do
+        @job.perform
+
+        @job.started_at.must_be_instance_of Time
+        @job.completed_at.must_be_instance_of Time
+        @job.completed_at.must_be :>, @job.started_at
+      end
+
       it 'extracts records from extractor and loads records with loader' do
         @job.perform
 

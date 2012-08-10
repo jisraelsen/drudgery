@@ -1,6 +1,6 @@
 module Drudgery
   class Job
-    attr_reader :id
+    attr_reader :id, :started_at, :completed_at
     attr_accessor :extractor, :loader, :transformer, :batch_size
 
     def initialize(options={})
@@ -48,6 +48,9 @@ module Drudgery
     end
 
     def perform
+      @started_at = Time.now
+      Drudgery.notify :before_job, self
+
       extract_records do |record|
         @records << record
 
@@ -57,12 +60,18 @@ module Drudgery
       end
 
       load_records
+
+      @completed_at = Time.now
+      Drudgery.notify :after_job, self
     end
 
     private
     def extract_records
       @extractor.extract do |data, index|
+        Drudgery.notify :after_extract, self, data, index
+
         record = transform_data(data)
+        Drudgery.notify :after_transform, self, record, index
 
         if record.nil?
           next
@@ -74,6 +83,8 @@ module Drudgery
 
     def load_records
       @loader.load(@records) unless @records.empty?
+      Drudgery.notify :after_load, self, @records
+
       @records.clear
     end
 

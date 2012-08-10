@@ -15,6 +15,26 @@ require 'drudgery/loaders/csv_loader'
 require 'drudgery/loaders/sqlite3_loader'
 
 module Drudgery
+  class << self
+    def listeners
+      @listeners ||= Hash.new { |hash, key| hash[key] = [] }
+    end
+
+    def subscribe(event, &block)
+      listeners[event] << block
+    end
+
+    def unsubscribe(event)
+      listeners[event].clear
+    end
+
+    def notify(event, *args)
+      listeners[event].each do |listener|
+        listener.call(*args)
+      end
+    end
+  end
+
   module Extractors
     def self.instantiate(type, *args)
       case type
