@@ -17,6 +17,12 @@ module Drudgery
       "#{@extractor.name} => #{@loader.name}"
     end
 
+    def record_count
+      if @extractor
+        @record_count ||= @extractor.record_count
+      end
+    end
+
     def extract(*args)
       if args.first.kind_of?(Symbol)
         extractor = Drudgery::Extractors.instantiate(*args)

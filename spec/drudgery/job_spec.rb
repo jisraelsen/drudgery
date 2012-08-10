@@ -49,6 +49,26 @@ module Drudgery
       end
     end
 
+    describe '#record_count' do
+      describe 'when extractor exists' do
+        it "returns the extractor's record_count" do
+          extractor = Extractors::CSVExtractor.new('test.csv')
+          extractor.stubs(:record_count).returns(1000)
+
+          job = Job.new(extractor: extractor)
+          job.record_count.must_equal 1000
+        end
+
+      end
+
+      describe 'when extractor does not exist' do
+        it 'returns nil' do
+          job = Job.new
+          job.record_count.must_be_nil
+        end
+      end
+    end
+
     describe '#extract' do
       describe 'when type and args provided' do
         it 'instantiates extractor with type and args' do
