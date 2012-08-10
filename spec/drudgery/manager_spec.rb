@@ -2,17 +2,19 @@ require 'spec_helper'
 
 module Drudgery
   describe Manager do
-    let(:manager) { Manager.new }
+    before do
+      @manager = Manager.new
+    end
 
     describe '#prepare' do
       it 'accepts job as an argument' do
         job = Job.new
 
-        manager.prepare(job)
+       @manager.prepare(job)
       end
 
       it 'allows configuration of job via block' do
-        manager.prepare do |job|
+        @manager.prepare do |job|
           job.extract :csv, 'records.csv'
         end
       end
@@ -28,9 +30,9 @@ module Drudgery
         job2.expects(:perform)
         job3.expects(:perform).never
 
-        manager.prepare(job1)
-        manager.prepare(job2)
-        manager.run
+        @manager.prepare(job1)
+        @manager.prepare(job2)
+        @manager.run
       end
     end
   end

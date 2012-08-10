@@ -11,17 +11,17 @@ module Drudgery
           t.integer :a
           t.integer :b
         end
+
+        @loader = ActiveRecordImportLoader.new(Record)
       end
 
       after do
         ActiveRecord::Base.clear_active_connections!
       end
 
-      let(:loader) { ActiveRecordImportLoader.new(Record) }
-
       describe '#name' do
         it 'returns active_record_import:<model name>' do
-          loader.name.must_equal 'active_record_import:Record'
+          @loader.name.must_equal 'active_record_import:Record'
         end
       end
 
@@ -30,7 +30,7 @@ module Drudgery
           record1 = { :a => 1, :b => 2 }
           record2 = { :a => 3, :b => 4 }
 
-          loader.load([record1, record2])
+          @loader.load([record1, record2])
 
           records = Record.all.map(&:attributes)
           records.must_equal([

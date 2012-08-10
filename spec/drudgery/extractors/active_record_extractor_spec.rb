@@ -15,17 +15,18 @@ module Drudgery
         Record.create!({ :a => 1, :b => 2 })
         Record.create!({ :a => 3, :b => 4 })
         Record.create!({ :a => 5, :b => 6 })
+
+        @extractor = ActiveRecordExtractor.new(Record)
       end
 
       after do
         ActiveRecord::Base.clear_active_connections!
       end
 
-      let(:extractor) { ActiveRecordExtractor.new(Record) }
 
       describe '#name' do
         it 'returns active_record:<model name>' do
-          extractor.name.must_equal 'active_record:Record'
+          @extractor.name.must_equal 'active_record:Record'
         end
       end
 
@@ -33,7 +34,7 @@ module Drudgery
         it 'yields each record hash and index' do
           records, indexes = [], []
 
-          extractor.extract do |record, index|
+          @extractor.extract do |record, index|
             records << record
             indexes << index
           end
@@ -50,8 +51,8 @@ module Drudgery
 
       describe '#record_count' do
         it 'returns model count' do
-          extractor = ActiveRecordExtractor.new(Record)
-          extractor.record_count.must_equal 3
+          @extractor = ActiveRecordExtractor.new(Record)
+          @extractor.record_count.must_equal 3
         end
       end
     end
