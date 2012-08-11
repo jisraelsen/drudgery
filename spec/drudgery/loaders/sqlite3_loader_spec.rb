@@ -28,25 +28,26 @@ module Drudgery
             loader.name.must_equal 'sqlite3:memory.cities'
           end
         end
+      end
 
-        describe '#load' do
-          it 'writes each record in single transaction' do
-            record1 = { :a => 1, :b => 2 }
-            record2 = { :a => 3, :b => 4 }
+      describe '#load' do
+        it 'writes each record in single transaction' do
+          record1 = { :a => 1, :b => 2 }
+          record2 = { :a => 3, :b => 4 }
 
-            loader = SQLite3Loader.new(@db, 'records')
-            loader.load([record1, record2])
+          loader = SQLite3Loader.new(@db, 'records')
+          loader.load([record1, record2])
 
-            results = []
-            @db.execute('SELECT * FROM records') do |result|
-              results << result
-            end
-
-            results.must_equal([
-              { 'a' => 1, 'b' => 2, 0 => 1, 1 => 2 },
-              { 'a' => 3, 'b' => 4, 0 => 3, 1 => 4}
-            ])
+          results = []
+          @db.execute('SELECT * FROM records') do |result|
+            result.reject! { |key, value| key.kind_of?(Integer) }
+            results << result
           end
+
+          results.must_equal([
+            { 'a' => 1, 'b' => 2 },
+            { 'a' => 3, 'b' => 4 }
+          ])
         end
       end
     end
