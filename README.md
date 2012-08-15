@@ -1,4 +1,4 @@
-Drudgery [![Build Status](https://secure.travis-ci.org/jisraelsen/drudgery.png?branch=master)](http://travis-ci.org/jisraelsen/drudgery)
+Drudgery [![Build Status](https://secure.travis-ci.org/jisraelsen/drudgery.png?branch=master)](http://travis-ci.org/jisraelsen/drudgery) [![Code Climate](https://codeclimate.com/badge.png)](https://codeclimate.com/github/jisraelsen/drudgery)
 ========
 
 A simple ETL library that supports the following sources/destinations:
