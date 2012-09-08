@@ -147,8 +147,8 @@ source = []
 m = Drudgery::Manager.new
 
 m.prepare do |job|
-  m.extract ArrayExtractor.new(source)
-  m.load :csv, 'destination.csv'
+  job.extract ArrayExtractor.new(source)
+  job.load :csv, 'destination.csv'
 end
 ```
 
@@ -186,8 +186,8 @@ source = []
 m = Drudgery::Manager.new
 
 m.prepare do |job|
-  m.extract :array, source
-  m.load :csv, 'destination.csv'
+  job.extract :array, source
+  job.load :csv, 'destination.csv'
 end
 ```
 
@@ -225,9 +225,9 @@ end
 m = Drudgery::Manager.new
 
 m.prepare do |job|
-  m.extract :csv, 'source.csv'
-  m.transform CustomTransformer.new
-  m.load :csv, 'destination.csv'
+  job.extract :csv, 'source.csv'
+  job.transform CustomTransformer.new
+  job.load :csv, 'destination.csv'
 end
 ```
 
@@ -267,8 +267,8 @@ destination = []
 m = Drudgery::Manager.new
 
 m.prepare do |job|
-  m.extract :csv, 'source.csv'
-  m.load ArrayLoader.new(destination)
+  job.extract :csv, 'source.csv'
+  job.load ArrayLoader.new(destination)
 end
 ```
 
@@ -298,8 +298,8 @@ destination = []
 m = Drudgery::Manager.new
 
 m.prepare do |job|
-  m.extract :csv, 'source.csv'
-  m.load :array, destination
+  job.extract :csv, 'source.csv'
+  job.load :array, destination
 end
 ```
 
