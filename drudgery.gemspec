@@ -1,30 +1,31 @@
 # -*- encoding: utf-8 -*-
-$:.push File.expand_path('../lib', __FILE__)
+lib = File.expand_path('../lib', __FILE__)
+$LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 require 'drudgery/version'
 
-Gem::Specification.new do |s|
-  s.name        = 'drudgery'
-  s.version     = Drudgery::VERSION
-  s.authors     = ['Jeremy Israelsen']
-  s.email       = ['jisraelsen@gmail.com']
-  s.homepage    = 'http://jisraelsen.github.com/drudgery'
-  s.summary     = 'Simple ETL Library'
-  s.description = 'A simple ETL library that supports CSV, SQLite3, and ActiveRecord sources and destinations.'
+Gem::Specification.new do |gem|
+  gem.name        = "drudgery"
+  gem.version     = Drudgery::VERSION
+  gem.authors     = ["Jeremy Israelsen"]
+  gem.email       = ["jisraelsen@gmail.com"]
+  gem.description = %q{A simple ETL library that supports CSV, SQLite3, and ActiveRecord sources and destinations.}
+  gem.summary     = %q{Simple ETL Library}
+  gem.homepage    = "http://jisraelsen.github.com/drudgery"
 
-  s.required_ruby_version = '>= 1.9.2'
+  gem.files         = `git ls-files`.split($/)  
+  gem.executables   = gem.files.grep(%r{^bin/}).map{ |f| File.basename(f) }
+  gem.test_files    = gem.files.grep(%r{^(test|spec|features)/})
+  gem.require_paths = ['lib']
 
-  s.rubyforge_project = 'drudgery'
+  gem.required_ruby_version = '>= 1.9.2'
 
-  s.files         = `git ls-files -- lib/*`.split("\n") + %w[LICENSE README.md]
-  s.test_files    = `git ls-files -- spec/*`.split("\n")
-  s.require_path  = 'lib'
-
-  s.add_development_dependency 'rake'
-  s.add_development_dependency 'bundler',             '~> 1.1'
-  s.add_development_dependency 'mocha',               '~> 0.12'
-  s.add_development_dependency 'simplecov',           '~> 0.6'
-  s.add_development_dependency 'guard-minitest',      '~> 0.5'
-  s.add_development_dependency 'activerecord',        '~> 3.0'
-  s.add_development_dependency 'activerecord-import', '~> 0.2.9'
-  s.add_development_dependency 'sqlite3',             '~> 1.3'
+  gem.add_development_dependency 'rake'
+  gem.add_development_dependency 'bundler',             '~> 1.1'
+  gem.add_development_dependency 'mocha',               '~> 0.12'
+  gem.add_development_dependency 'simplecov',           '~> 0.7'
+  gem.add_development_dependency 'coveralls',           '~> 0.6'
+  gem.add_development_dependency 'guard-minitest',      '~> 0.5'
+  gem.add_development_dependency 'activerecord',        '~> 3.0'
+  gem.add_development_dependency 'activerecord-import', '~> 0.2.9'
+  gem.add_development_dependency 'sqlite3',             '~> 1.3'
 end
